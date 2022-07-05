@@ -19,6 +19,7 @@
 <Script file="Libs\DewdropLib\Dewdrop-2.0\Dewdrop-2.0.lua"/>
 
 <Script file="MysticExtended.lua"/>
+<Script file="MysticExtendedListFrame.lua"/>
 <!-- <Script file="MysticExtendedOptions.lua"/> -->
 
 </Ui>
