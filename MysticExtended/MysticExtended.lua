@@ -13,6 +13,7 @@ local DefaultMysticExtendedDB  = {
 ["currentSelectedList"] = "Enchant List 1",
 ["RollByQuality"] = true,
 ["RollByLists"] = false,
+["ButtonEnable"] = true,
 ["QualityList"] = {
     [1] = {"Uncommon",true,2},
     [2] = {"Rare",true,3},
@@ -212,6 +213,16 @@ local function EnableClick(list,cat)
     end
 end
 
+local function ButtonEnable()
+    if MysticExtendedDB["ButtonEnable"] then
+        MysticExtendedFrame:Hide();
+        MysticExtendedDB["ButtonEnable"] = false
+    else
+        MysticExtendedFrame:Show();
+        MysticExtendedDB["ButtonEnable"] = true
+    end
+end
+
 function MysticExtended_DewdropMenuRegister(self)
 	MysticExtended_DewdropMenu:Register(self,
         'point', function(parent)
@@ -232,6 +243,11 @@ function MysticExtended_DewdropMenuRegister(self)
                             'value', MysticExtendedDB["QualityList"],
                             'checked', MysticExtendedDB["RollByQuality"],
                             'func', QualityEnable
+                        )
+                MysticExtended_DewdropMenu:AddLine(
+                            'text', "Show/Hide Button",
+                            'checked', MysticExtendedDB["ButtonEnable"],
+                            'func', ButtonEnable
                         )
                 MysticExtended_DewdropMenu:AddLine(
 					'text', "Close Menu",
@@ -363,4 +379,9 @@ end
 function addon:OnEnable()
     MysticExtended_ListEnable();
     MysticExtended_DropDownInitialize();
+    if MysticExtendedDB["ButtonEnable"] then
+        MysticExtendedFrame:Show();
+    else
+        MysticExtendedFrame:Hide();
+    end
 end
