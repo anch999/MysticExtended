@@ -20,6 +20,6 @@
 
 <Script file="MysticExtended.lua"/>
 <Script file="MysticExtendedListFrame.lua"/>
-<!-- <Script file="MysticExtendedOptions.lua"/> -->
+<Script file="MysticExtendedOptions.lua"/>
 
 </Ui>
