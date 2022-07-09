@@ -39,7 +39,7 @@ local function AddIdButton()
 			end
 		end
 	end
-	local text = MysticExtendedOptions_AddIDeditbox:GetText();
+	local text = tonumber(MysticExtendedOptions_AddIDeditbox:GetText());
 	if not checkID(text) then
 		table.insert(MysticExtendedDB["ReRollItems"],text)
 	end
@@ -50,7 +50,6 @@ local function DeleteIdButton()
 	table.remove(MysticExtendedDB["ReRollItems"],id)
 	UIDropDownMenu_SetSelectedID(MysticExtendedOptions_Menu,1);
 end
-
 
 --Creates the options frame and all its assets
 InterfaceOptionsFrame:SetWidth(850)
