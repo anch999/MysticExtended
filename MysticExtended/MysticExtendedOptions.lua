@@ -40,15 +40,17 @@ local function AddIdButton()
 		end
 	end
 	local text = tonumber(MysticExtendedOptions_AddIDeditbox:GetText());
-	if not checkID(text) then
+	if not checkID(text) and GetItemInfo(text) then
 		table.insert(MysticExtendedDB["ReRollItems"],text)
 	end
 end
 
 local function DeleteIdButton()
-	local id = MysticExtendedOptions_AddIDeditbox:GetID();
+	local id = UIDropDownMenu_GetSelectedID(MysticExtendedOptions_Menu);
 	table.remove(MysticExtendedDB["ReRollItems"],id)
+	MysticExtendedOptions_Menu_Initialize();
 	UIDropDownMenu_SetSelectedID(MysticExtendedOptions_Menu,1);
+	UIDropDownMenu_SetText(MysticExtendedOptions_Menu,GetItemInfo(MysticExtendedDB["ReRollItems"][1]));
 end
 
 --Creates the options frame and all its assets
@@ -86,3 +88,21 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	removeBtn:SetSize(110,20);
 	removeBtn:SetText("Delete item")
 	removeBtn:SetScript("OnClick", function() DeleteIdButton() end);
+
+	local delaySlider = CreateFrame("Slider", "MysticExtended_DelaySlider", MysticExtendedOptionsFrame, "OptionsSliderTemplate")
+	delaySlider:SetPoint("TOPLEFT", 20, -135);
+	delaySlider:SetSize(160,20);
+	delaySlider:SetOrientation("HORIZONTAL");
+	delaySlider:SetMinMaxValues(1, 10);
+	delaySlider:SetValueStep(1);
+	delaySlider.Lable = delaySlider:CreateFontString(nil , "BORDER", "GameFontNormal");
+	delaySlider.Lable:SetJustifyH("LEFT");
+	delaySlider.Lable:SetPoint("BOTTOM", delaySlider, "BOTTOM", 0, -10);
+	delaySlider.Lable:SetText("ReRoll Delay");
+	delaySlider.tooltipText = "Change Delay if you keep getting Ability not ready yet" --Creates a tooltip on mouseover.
+	getglobal(delaySlider:GetName() .. 'Low'):SetText('.1'); --Sets the left-side slider text (default is "Low").
+	getglobal(delaySlider:GetName() .. 'High'):SetText('.10'); --Sets the right-side slider text (default is "High").
+	delaySlider:SetScript("OnValueChanged", function()
+		MysticExtendedDB["REFORGE_RETRY_DELAY"] = delaySlider:GetValue();
+		getglobal(delaySlider:GetName() .. 'Text'):SetText(tonumber("."..delaySlider:GetValue()));
+	end);

@@ -19,7 +19,8 @@ local DefaultMysticExtendedDB  = {
     [2] = {"Rare",true,3},
     [3] = {"Epic",true,4},
     [4] = {"Legendary",true,5}
-}
+},
+["REFORGE_RETRY_DELAY"] = 3,
 };
 
 local function MysticExtended_DoSaveList(bagID, slotID)
@@ -55,7 +56,6 @@ local function MysticExtended_DoRarity(bagID, slotID)
 end
 
 local AutoOn = false;
-local REFORGE_RETRY_DELAY = 0.3; -- seconds
 
 function addon:Repeat()
     MysticExtended_RollEnchant();
@@ -69,7 +69,7 @@ local function EventHandler(event, unitID, spell)
             MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
             addon:CancelTimer(addon.rollTimer);
-            addon:ScheduleTimer(MysticExtended_RollEnchant, REFORGE_RETRY_DELAY);
+            addon:ScheduleTimer(MysticExtended_RollEnchant, tonumber("."..MysticExtendedDB["REFORGE_RETRY_DELAY"]));
         end
         addon:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
         addon:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
@@ -121,9 +121,10 @@ local function MysticExtended_FindNextItem()
         for s = slotID + 1, GetContainerNumSlots(b) do
             if MysticExtended_GetItemID(b,s) then
                 local listName,enchNum,enableDisenchant,enableRoll,ignoreList = MysticExtended_DoSaveList(b,s)
-                    if enableRoll and ignoreList == false then
+                    if enableRoll and ignoreList ~= true then
                         if enableDisenchant then
                             DisenchantItem(b,s);
+                            MysticExtended_ScrollFrameUpdate();
                         end
                     elseif  enableRoll and ignoreList then
                         return b, s;
@@ -174,6 +175,7 @@ local function MysticExtended_StartAutoRoll()
     if AutoOn then
         MysticExtended_StopAutoRoll();
     else
+        if IsMounted() then Dismount() end
         AutoOn = true;
         MysticExtendedFrame_Menu:SetText("Auto Reforging");
         MysticExtended_ListFrameReforgeButton:SetText("Auto Reforging");
@@ -326,8 +328,12 @@ function MysticExtended_OnClick(self,arg1)
         if (arg1=="LeftButton") then
             MysticExtended_StartAutoRoll();
         elseif (arg1=="RightButton") then
+            if IsAltKeyDown() then
+                MysticEnchantingFrame:Display();
+            else
             MysticExtended_DewdropMenuRegister(self);
             MysticExtended_DewdropMenu:Open(this);
+            end
         end
     end
 end
@@ -384,4 +390,17 @@ function addon:OnEnable()
     else
         MysticExtendedFrame:Hide();
     end
+    
+    if MysticExtendedDB["REFORGE_RETRY_DELAY"] == nil then
+        MysticExtendedDB["REFORGE_RETRY_DELAY"] = 3;
+    end
+
+    if MYSTIC_ENCHANTS then
+        for k,v in pairs(MYSTIC_ENCHANTS) do
+            if v.enchantID ~= 0 then
+               v.spellName = GetSpellInfo(v.spellID)
+            end
+         end
+    end
+    MysticExtended_DelaySlider:SetValue(MysticExtendedDB["REFORGE_RETRY_DELAY"]);
 end

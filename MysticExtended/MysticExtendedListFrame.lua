@@ -207,6 +207,7 @@ function MysticExtended_ScrollFrameUpdate()
 	local offset = FauxScrollFrame_GetOffset(scrollFrame.scrollBar);
 	for i = 1, MAX_ROWS do
 		local value = i + offset
+        scrollFrame.rows[i]:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD");
 		if value <= maxValue and MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value] ~= nil then
 			local row = scrollFrame.rows[i]
             local _, _, _, qualityColor = GetItemQualityColor(MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]].quality)
