@@ -106,3 +106,11 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 		MysticExtendedDB["REFORGE_RETRY_DELAY"] = delaySlider:GetValue();
 		getglobal(delaySlider:GetName() .. 'Text'):SetText(tonumber("."..delaySlider:GetValue()));
 	end);
+
+	local hideFloat = CreateFrame("CheckButton", "MysticExtendedOptions_FloatSetting", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	hideFloat:SetPoint("TOPLEFT", 15, -170);
+	hideFloat.Lable = hideFloat:CreateFontString(nil , "BORDER", "GameFontNormal");
+	hideFloat.Lable:SetJustifyH("LEFT");
+	hideFloat.Lable:SetPoint("LEFT", 30, 0);
+	hideFloat.Lable:SetText("Show/Hide Floating Button");
+	hideFloat:SetScript("OnClick", function() MysticExtended:ButtonEnable() end);

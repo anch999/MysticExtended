@@ -1,18 +1,15 @@
-local MysticExtended, MEx = ...
-local addonName = "MysticExtended";
-_G[addonName] = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceSerializer-3.0", "AceTimer-3.0")
-local addon = _G[addonName];
+MysticExtended = LibStub("AceAddon-3.0"):NewAddon("MysticExtended", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceSerializer-3.0", "AceTimer-3.0")
 
 MysticExtended_DewdropMenu = AceLibrary("Dewdrop-2.0");
 
 --Set Savedvariables defaults
+local RollExtracts = false;
 local DefaultMysticExtendedDB  = {
 ["EnchantSaveLists"] = {["Enchant List 1"] = {["menuID"] = 1,["Name"] = "Enchant List 1"}},
 ["ReRollItems"] = {18863, 18853,992720},
 ["ListFrameLastState"] = false,
 ["currentSelectedList"] = "Enchant List 1",
 ["RollByQuality"] = true,
-["RollByLists"] = false,
 ["ButtonEnable"] = true,
 ["QualityList"] = {
     [1] = {"Uncommon",true,2},
@@ -20,13 +17,13 @@ local DefaultMysticExtendedDB  = {
     [3] = {"Epic",true,4},
     [4] = {"Legendary",true,5}
 },
-["REFORGE_RETRY_DELAY"] = 3,
+["REFORGE_RETRY_DELAY"] = 5,
 };
 
 local function MysticExtended_DoSaveList(bagID, slotID)
     local enchantID = GetREInSlot(bagID, slotID)
         for i , v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
-            if v.enableRoll and MysticExtendedDB.RollByLists then
+            if v.enableRoll then
                 for a , b in ipairs(v) do
                     if b[1] == enchantID then
                         return v.Name,a,v.enableDisenchant,v.enableRoll,v.ignoreList
@@ -57,7 +54,7 @@ end
 
 local AutoOn = false;
 
-function addon:Repeat()
+function MysticExtended:Repeat()
     MysticExtended_RollEnchant();
 end
 
@@ -68,11 +65,11 @@ local function EventHandler(event, unitID, spell)
             MysticExtendedFrame_Menu:SetText("Start Reforge");
             MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-            addon:CancelTimer(addon.rollTimer);
-            addon:ScheduleTimer(MysticExtended_RollEnchant, tonumber("."..MysticExtendedDB["REFORGE_RETRY_DELAY"]));
+            MysticExtended:CancelTimer(MysticExtended.rollTimer);
+            MysticExtended:ScheduleTimer(MysticExtended_RollEnchant, tonumber(MysticExtendedDB["REFORGE_RETRY_DELAY"] / 10));
         end
-        addon:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
-        addon:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
+        MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
+        MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
     end
 end
 
@@ -121,7 +118,9 @@ local function MysticExtended_FindNextItem()
         for s = slotID + 1, GetContainerNumSlots(b) do
             if MysticExtended_GetItemID(b,s) then
                 local listName,enchNum,enableDisenchant,enableRoll,ignoreList = MysticExtended_DoSaveList(b,s)
-                    if enableRoll and ignoreList ~= true then
+                    if RollExtracts then
+                        return b, s;
+                    elseif enableRoll and ignoreList ~= true then
                         if enableDisenchant then
                             DisenchantItem(b,s);
                             MysticExtended_ScrollFrameUpdate();
@@ -140,9 +139,9 @@ local function MysticExtended_FindNextItem()
 end
 
 local function MysticExtended_StopAutoRoll()
-    addon:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
-    addon:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
-    addon:CancelTimer(addon.rollTimer);
+    MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
+    MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
+    MysticExtended:CancelTimer(MysticExtended.rollTimer);
     MysticExtendedFrame_Menu:SetText("Start Reforge");
     MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
     AutoOn = false;
@@ -150,12 +149,14 @@ end
 
 function MysticExtended_RollEnchant()
     local bagID, slotID = MysticExtended_FindNextItem();
-    if AutoOn and GetItemCount(98462) >= 1 and MysticExtended_GetItemID(bagID, slotID) then
-        addon:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", EventHandler);
-        addon:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", EventHandler);
-        addon.rollTimer = addon:ScheduleTimer("Repeat", 3);
+    if AutoOn and GetItemCount(98462) > 0 and MysticExtended_GetItemID(bagID, slotID) and GetUnitSpeed("player") == 0 then
+        MysticExtended:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", EventHandler);
+        MysticExtended:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", EventHandler);
+        MysticExtended.rollTimer = MysticExtended:ScheduleTimer("Repeat", 3);
         local listName,enchNum,enableDisenchant,enableRoll,ignoreList = MysticExtended_DoSaveList(bagID,slotID)
-        if enableRoll and ignoreList == false then
+        if RollExtracts then
+            RequestSlotReforgeEnchantment(bagID, slotID);
+        elseif enableRoll and ignoreList ~= true then
         elseif enableRoll and ignoreList then
             RequestSlotReforgeEnchantment(bagID, slotID);
         elseif MysticExtended_DoRarity(bagID,slotID) then else
@@ -164,8 +165,8 @@ function MysticExtended_RollEnchant()
     else
         if GetItemCount(98462) <= 0 then
             print("Out Runes")
-        else
-            print("Out off Items to Reforge")
+        elseif GetUnitSpeed("player") == 0 then
+            print("Out of Items to Reforge")
         end
         MysticExtended_StopAutoRoll();
     end
@@ -185,43 +186,44 @@ end
 
 local function QualityEnable()
     if MysticExtendedDB["RollByQuality"] then
-        MysticExtendedDB["RollByQuality"] = false
+        MysticExtendedDB["RollByQuality"] = false;
     else
-        MysticExtendedDB["RollByQuality"] = true
+        MysticExtendedDB["RollByQuality"] = true;
     end
 end
 
 local function QualitySet(tablenum,state)
     if state then
-        MysticExtendedDB["QualityList"][tablenum][2] = false
+        MysticExtendedDB["QualityList"][tablenum][2] = false;
     else
-        MysticExtendedDB["QualityList"][tablenum][2] = true
+        MysticExtendedDB["QualityList"][tablenum][2] = true;
     end
 end
 
-local function MasterSaveListSwitch()
-    if MysticExtendedDB["RollByLists"] then
-        MysticExtendedDB["RollByLists"] = false
-    else
-        MysticExtendedDB["RollByLists"] = true
-    end
-end
-
-local function EnableClick(list,cat)
+local function EnableClick(list,cat,cat2)
     if MysticExtendedDB["EnchantSaveLists"][list][cat] then
-        MysticExtendedDB["EnchantSaveLists"][list][cat] = false
+        MysticExtendedDB["EnchantSaveLists"][list][cat] = false;
     else
-        MysticExtendedDB["EnchantSaveLists"][list][cat] = true
+        MysticExtendedDB["EnchantSaveLists"][list][cat] = true;
+        MysticExtendedDB["EnchantSaveLists"][list][cat2] = false;
     end
 end
 
-local function ButtonEnable()
+function MysticExtended:ButtonEnable()
     if MysticExtendedDB["ButtonEnable"] then
         MysticExtendedFrame:Hide();
         MysticExtendedDB["ButtonEnable"] = false
     else
         MysticExtendedFrame:Show();
         MysticExtendedDB["ButtonEnable"] = true
+    end
+end
+
+local function RollExtractsEnable()
+    if RollExtracts then
+        RollExtracts = false;
+    else
+        RollExtracts = true;
     end
 end
 
@@ -233,24 +235,23 @@ function MysticExtended_DewdropMenuRegister(self)
         'children', function(level, value)
             if level == 1 then
                 MysticExtended_DewdropMenu:AddLine(
-                            'text', "Select Lists to Roll",
-                            'hasArrow', true,
-                            'value', MysticExtendedDB["EnchantSaveLists"],
-                            'checked', MysticExtendedDB["RollByLists"],
-                            'func', MasterSaveListSwitch
-                        )
+                    'text', "Select Lists to Roll",
+                    'hasArrow', true,
+                    'value', MysticExtendedDB["EnchantSaveLists"],
+                    'notCheckable', true
+                )
                 MysticExtended_DewdropMenu:AddLine(
-                            'text', "Roll Quility",
-                            'hasArrow', true,
-                            'value', MysticExtendedDB["QualityList"],
-                            'checked', MysticExtendedDB["RollByQuality"],
-                            'func', QualityEnable
-                        )
+                    'text', "Roll Quality",
+                    'hasArrow', true,
+                    'value', MysticExtendedDB["QualityList"],
+                    'notCheckable', true
+                )
                 MysticExtended_DewdropMenu:AddLine(
-                            'text', "Show/Hide Button",
-                            'checked', MysticExtendedDB["ButtonEnable"],
-                            'func', ButtonEnable
-                        )
+                    'text', "Roll For Extracts",
+                    'value', "RollExtracts",
+                    'hasArrow', true,
+                    'notCheckable', true
+                )
                 MysticExtended_DewdropMenu:AddLine(
 					'text', "Close Menu",
                     'textR', 0,
@@ -261,6 +262,11 @@ function MysticExtended_DewdropMenuRegister(self)
 				)
             elseif level == 2 then
 				if value == MysticExtendedDB["QualityList"] then
+                    MysticExtended_DewdropMenu:AddLine(
+                            'text', "Enable",
+                            'func', QualityEnable,
+                            'checked', MysticExtendedDB["RollByQuality"]
+                        )
                     for k,v in ipairs(value) do
                         local _, _, _, qualityColor = GetItemQualityColor(v[3])
                         MysticExtended_DewdropMenu:AddLine(
@@ -275,14 +281,29 @@ function MysticExtended_DewdropMenuRegister(self)
                     for k,v in pairs(value) do
                         MysticExtended_DewdropMenu:AddLine(
                             'text', v.Name,
-                            'arg1', v.Name,
-                            'arg2', "enableRoll",
                             'hasArrow', true,
-                            'func', EnableClick,
-                            'checked', v.enableRoll,
-                            'value', v
+                            'value', v,
+                            'notCheckable', true
                         )
                     end
+                elseif value == "RollExtracts" then
+                    MysticExtended_DewdropMenu:AddLine(
+                            'text', "Enable",
+                            'checked', RollExtracts,
+                            'func', RollExtractsEnable
+                        )
+                    MysticExtended_DewdropMenu:AddLine(
+                        'text', "When this option is enabled it will ignore all",
+                        'notCheckable', true
+                    )
+                    MysticExtended_DewdropMenu:AddLine(
+                        'text', "other rolling options and just roll on the",
+                        'notCheckable', true
+                    )
+                    MysticExtended_DewdropMenu:AddLine(
+                        'text', "first item it finds till you run out of runes",
+                        'notCheckable', true
+                    )
                 end
                 MysticExtended_DewdropMenu:AddLine(
 					'text', "Close Menu",
@@ -293,27 +314,36 @@ function MysticExtended_DewdropMenuRegister(self)
 					'notCheckable', true
 				)
             elseif level == 3 then
-                    MysticExtended_DewdropMenu:AddLine(
-                            'text', "Auto add this to collection and remove from list when found",
-                            'arg1', value.Name,
-                            'arg2', "enableDisenchant",
-                            'func', EnableClick,
-                            'checked', value.enableDisenchant
-                        )
-                    MysticExtended_DewdropMenu:AddLine(
-                        'text', "Skip items on this list when found",
-                        'arg1', value.Name,
-                        'arg2', "ignoreList",
-                        'func', EnableClick,
-                        'checked', value.ignoreList
-                    )
-                    MysticExtended_DewdropMenu:AddLine(
-					'text', "Close Menu",
+                MysticExtended_DewdropMenu:AddLine(
+                    'text', "Enable List",
+                    'arg1', value.Name,
+                    'arg2', "enableRoll",
+                    'func', EnableClick,
+                    'checked', value.enableRoll
+                )
+                MysticExtended_DewdropMenu:AddLine(
+                    'text', "Disenchant to Collection and remove from list",
+                    'arg1', value.Name,
+                    'arg2', "enableDisenchant",
+                    'arg3', "ignoreList",
+                    'func', EnableClick,
+                    'checked', value.enableDisenchant
+                )
+                MysticExtended_DewdropMenu:AddLine(
+                    'text', "ReRoll items on this list when found",
+                    'arg1', value.Name,
+                    'arg2', "ignoreList",
+                    'arg3', "enableDisenchant",
+                    'func', EnableClick,
+                    'checked', value.ignoreList
+                )
+                MysticExtended_DewdropMenu:AddLine(
+				    'text', "Close Menu",
                     'textR', 0,
                     'textG', 1,
                     'textB', 1,
-					'func', function() MysticExtended_DewdropMenu:Close() end,
-					'notCheckable', true
+				    'func', function() MysticExtended_DewdropMenu:Close() end,
+				    'notCheckable', true
 				)
             end
 		end,
@@ -376,23 +406,25 @@ local function CloneTable(t)				-- return a copy of the table t
 	return new;
 end
 
-function addon:OnInitialize()
+function MysticExtended:OnInitialize()
     if ( MysticExtendedDB == nil ) then
         MysticExtendedDB = CloneTable(DefaultMysticExtendedDB);
     end
 end
 
-function addon:OnEnable()
+function MysticExtended:OnEnable()
     MysticExtended_ListEnable();
     MysticExtended_DropDownInitialize();
     if MysticExtendedDB["ButtonEnable"] then
         MysticExtendedFrame:Show();
+        MysticExtendedOptions_FloatSetting:SetChecked(true);
     else
         MysticExtendedFrame:Hide();
+        MysticExtendedOptions_FloatSetting:SetChecked(false);
     end
-    
+
     if MysticExtendedDB["REFORGE_RETRY_DELAY"] == nil then
-        MysticExtendedDB["REFORGE_RETRY_DELAY"] = 3;
+        MysticExtendedDB["REFORGE_RETRY_DELAY"] = 5;
     end
 
     if MYSTIC_ENCHANTS then
