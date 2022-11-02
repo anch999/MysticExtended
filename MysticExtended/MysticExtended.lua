@@ -19,14 +19,14 @@ local DefaultMysticExtendedDB  = {
 },
 ["REFORGE_RETRY_DELAY"] = 5,
 };
-
+local realmName = GetRealmName();
 local function MysticExtended_DoSaveList(bagID, slotID)
     local enchantID = GetREInSlot(bagID, slotID)
         for i , v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
-            if v.enableRoll then
+            if v[realmName]["enableRoll"] then
                 for a , b in ipairs(v) do
                     if b[1] == enchantID then
-                        return v.Name,a,v[GetRealmName()]["enableDisenchant"],v[GetRealmName()]["enableRoll"],v[GetRealmName()]["ignoreList"]
+                        return v.Name,a,v[realmName]["enableDisenchant"],v[realmName]["enableRoll"],v[realmName]["ignoreList"]
                     end
                 end
             end
@@ -201,12 +201,12 @@ local function QualitySet(tablenum,state)
 end
 
 local function EnableClick(list,cat,cat2)
-    if MysticExtendedDB["EnchantSaveLists"][list][GetRealmName()][cat] then
-        MysticExtendedDB["EnchantSaveLists"][list][GetRealmName()][cat] = false;
+    if MysticExtendedDB["EnchantSaveLists"][list][realmName][cat] then
+        MysticExtendedDB["EnchantSaveLists"][list][realmName][cat] = false;
     else
-        MysticExtendedDB["EnchantSaveLists"][list][GetRealmName()][cat] = true;
+        MysticExtendedDB["EnchantSaveLists"][list][realmName][cat] = true;
         if cat2 then
-            MysticExtendedDB["EnchantSaveLists"][list][GetRealmName()][cat2] = false;
+            MysticExtendedDB["EnchantSaveLists"][list][realmName][cat2] = false;
         end
     end
 end
@@ -321,7 +321,7 @@ function MysticExtended_DewdropMenuRegister(self)
                     'arg1', value.Name,
                     'arg2', "enableRoll",
                     'func', EnableClick,
-                    'checked', value[GetRealmName()]["enableRoll"]
+                    'checked', value[realmName]["enableRoll"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
                     'text', "Disenchant to Collection and remove from list",
@@ -329,7 +329,7 @@ function MysticExtended_DewdropMenuRegister(self)
                     'arg2', "enableDisenchant",
                     'arg3', "ignoreList",
                     'func', EnableClick,
-                    'checked', value[GetRealmName()]["enableDisenchant"]
+                    'checked', value[realmName]["enableDisenchant"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
                     'text', "ReRoll items on this list when found",
@@ -337,7 +337,7 @@ function MysticExtended_DewdropMenuRegister(self)
                     'arg2', "ignoreList",
                     'arg3', "enableDisenchant",
                     'func', EnableClick,
-                    'checked', value[GetRealmName()]["ignoreList"]
+                    'checked', value[realmName]["ignoreList"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
 				    'text', "Close Menu",
@@ -424,10 +424,10 @@ function MysticExtended:OnEnable()
         MysticExtendedFrame:Hide();
         MysticExtendedOptions_FloatSetting:SetChecked(false);
     end
-
+    realmName = GetRealmName();
     for i,v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
-        if not v[GetRealmName()] then
-            v[GetRealmName()] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};
+        if not v[realmName] then
+            v[realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};
         end
         if type(v.enableDisenchant) == "boolean" then
             v.enableDisenchant = nil;
