@@ -16,8 +16,6 @@ local mainframe = CreateFrame("FRAME", "MysticExtendedListFrame", MysticEnchanti
         end
     end)
 
-
-
 local function setCurrentSelectedList(name)
     local thisID = this:GetID();
     MysticExtendedDB["currentSelectedList"] = name;
@@ -53,7 +51,7 @@ StaticPopupDialogs["MYSTICEXTENDED_ADDLIST"] = {
     hasEditBox = true,
     OnAccept = function (self, data, data2)
         local text = self.editBox:GetText()
-        MysticExtendedDB["EnchantSaveLists"][text] = {["Name"] = text}
+        MysticExtendedDB["EnchantSaveLists"][text] = {["Name"] = text, [GetRealmName()] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}; }
         UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended_Menu_Initialize);
         UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,MysticExtendedDB["EnchantSaveLists"][text].menuID);
         MysticExtendedDB["currentSelectedList"] = text;
@@ -189,20 +187,8 @@ local scrollFrame = CreateFrame("Frame", "MysticExtended_ScrollFrame", MysticExt
         insets = { left = 4, right = 4, top = 4, bottom = 4 },
     });
 
-local function GetNumOfRows()
-    local num = 1
-    if MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]] ~= nil then
-        for n in ipairs(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]]) do
-                num = num + 1
-        end
-    else
-        num = 0
-    end
-    return num
-end
-
 function MysticExtended_ScrollFrameUpdate()
-    local maxValue = GetNumOfRows()
+    local maxValue = #MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]]
 	FauxScrollFrame_Update(scrollFrame.scrollBar, maxValue, MAX_ROWS, ROW_HEIGHT);
 	local offset = FauxScrollFrame_GetOffset(scrollFrame.scrollBar);
 	for i = 1, MAX_ROWS do
@@ -213,7 +199,7 @@ function MysticExtended_ScrollFrameUpdate()
             local _, _, _, qualityColor = GetItemQualityColor(MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]].quality)
             row:SetText(qualityColor..MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]].spellName)
             row.enchantID = MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]
-            row.link = MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][2]
+            row.link = MysticExtended:CreateItemLink(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1])
 			row:Show()
 		else
 			scrollFrame.rows[i]:Hide()
@@ -263,7 +249,7 @@ end })
 
 scrollFrame.rows = rows
 
-function MysticExtended_CreateItemLink(id)
+function MysticExtended:CreateItemLink(id)
     local _, _, _, qualityColor = GetItemQualityColor(MYSTIC_ENCHANTS[id].quality)
     local link = qualityColor.."|Hspell:"..MYSTIC_ENCHANTS[id].spellID.."|h["..MYSTIC_ENCHANTS[id].spellName.."]|h|r"
     return link
@@ -275,21 +261,20 @@ hooksecurefunc("ChatEdit_InsertLink", function(link)
         id = tonumber(link:match("item:(%d+)"))
         MysticExtendedOptions_AddIDeditbox:SetText(id);
     else
-    if MysticExtendedListFrame:IsVisible() then
-		
-        if link:match("item:") then
-            id = GetREInSlot(GetMouseFocus():GetParent():GetID(), GetMouseFocus():GetID())
-            link = MysticExtended_CreateItemLink(id)
-        else
-            id = tonumber(link:match("spell:(%d+)"))
-            id = MYSTIC_ENCHANT_SPELLS[id]
-        end
-            if not GetSavedEnchant(id) then
-                table.insert(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]],{id,link})
-                MysticExtended_ScrollFrameUpdate()
+        if MysticExtendedListFrame:IsVisible() then
+            
+            if link:match("item:") then
+                id = GetREInSlot(GetMouseFocus():GetParent():GetID(), GetMouseFocus():GetID())
+            else
+                id = tonumber(link:match("spell:(%d+)"))
+                id = MYSTIC_ENCHANT_SPELLS[id]
             end
-    return true
-	end
+                if not GetSavedEnchant(id) then
+                    table.insert(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]],{id})
+                    MysticExtended_ScrollFrameUpdate()
+                end
+        return true
+        end
     end
 end)
 

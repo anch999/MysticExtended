@@ -26,7 +26,7 @@ local function MysticExtended_DoSaveList(bagID, slotID)
             if v.enableRoll then
                 for a , b in ipairs(v) do
                     if b[1] == enchantID then
-                        return v.Name,a,v.enableDisenchant,v.enableRoll,v.ignoreList
+                        return v.Name,a,v[GetRealmName()]["enableDisenchant"],v[GetRealmName()]["enableRoll"],v[GetRealmName()]["ignoreList"]
                     end
                 end
             end
@@ -92,7 +92,7 @@ end
 local function DisenchantItem(bagID,slotID)
     if GetItemCount(98463) and (GetItemCount(98463) > 0) then
         if IsReforgeEnchantmentKnown(GetREInSlot(bagID,slotID)) then
-            print("You already know this enchant removed from list");
+            DEFAULT_CHAT_FRAME:AddMessage("You already know this enchant removed from list");
             MysticExtended_RemoveFound(bagID,slotID);
         else
             local hideMframe = true;
@@ -101,14 +101,14 @@ local function DisenchantItem(bagID,slotID)
             end
             MysticExtended_RemoveFound(bagID,slotID);
             RequestSlotReforgeExtraction(bagID, slotID);
-            local itemLink = MysticExtended_CreateItemLink(GetREInSlot(bagID,slotID));
-            print(itemLink.." Has been added to your collection and removed from the list");
+            local itemLink = MysticExtended:CreateItemLink(GetREInSlot(bagID,slotID));
+            DEFAULT_CHAT_FRAME:AddMessage(itemLink.." Has been added to your collection and removed from the list");
             if hideMframe then
                 MysticEnchantingFrame:Hide()
             end
         end
     else
-        print("You don't have enough Mystic Extract to disenchant that item")
+        DEFAULT_CHAT_FRAME:AddMessage("You don't have enough Mystic Extract to disenchant that item")
     end
 end
 
@@ -164,9 +164,9 @@ function MysticExtended_RollEnchant()
         end
     else
         if GetItemCount(98462) <= 0 then
-            print("Out Runes")
+            DEFAULT_CHAT_FRAME:AddMessage("Out Runes")
         elseif GetUnitSpeed("player") == 0 then
-            print("Out of Items to Reforge")
+            DEFAULT_CHAT_FRAME:AddMessage("Out of Items to Reforge")
         end
         MysticExtended_StopAutoRoll();
     end
@@ -201,11 +201,13 @@ local function QualitySet(tablenum,state)
 end
 
 local function EnableClick(list,cat,cat2)
-    if MysticExtendedDB["EnchantSaveLists"][list][cat] then
-        MysticExtendedDB["EnchantSaveLists"][list][cat] = false;
+    if MysticExtendedDB["EnchantSaveLists"][list][GetRealmName()][cat] then
+        MysticExtendedDB["EnchantSaveLists"][list][GetRealmName()][cat] = false;
     else
-        MysticExtendedDB["EnchantSaveLists"][list][cat] = true;
-        MysticExtendedDB["EnchantSaveLists"][list][cat2] = false;
+        MysticExtendedDB["EnchantSaveLists"][list][GetRealmName()][cat] = true;
+        if cat2 then
+            MysticExtendedDB["EnchantSaveLists"][list][GetRealmName()][cat2] = false;
+        end
     end
 end
 
@@ -319,7 +321,7 @@ function MysticExtended_DewdropMenuRegister(self)
                     'arg1', value.Name,
                     'arg2', "enableRoll",
                     'func', EnableClick,
-                    'checked', value.enableRoll
+                    'checked', value[GetRealmName()]["enableRoll"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
                     'text', "Disenchant to Collection and remove from list",
@@ -327,7 +329,7 @@ function MysticExtended_DewdropMenuRegister(self)
                     'arg2', "enableDisenchant",
                     'arg3', "ignoreList",
                     'func', EnableClick,
-                    'checked', value.enableDisenchant
+                    'checked', value[GetRealmName()]["enableDisenchant"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
                     'text', "ReRoll items on this list when found",
@@ -335,7 +337,7 @@ function MysticExtended_DewdropMenuRegister(self)
                     'arg2', "ignoreList",
                     'arg3', "enableDisenchant",
                     'func', EnableClick,
-                    'checked', value.ignoreList
+                    'checked', value[GetRealmName()]["ignoreList"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
 				    'text', "Close Menu",
@@ -374,14 +376,14 @@ local mainframe = CreateFrame("FRAME", "MysticExtendedFrame", UIParent, nil);
    mainframe:SetSize(120,50);
    mainframe:EnableMouse(true);
    mainframe:SetMovable(true);
-   mainframe:SetBackdrop({
+   --[[ mainframe:SetBackdrop({
        bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
        edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
        tile = "true",
        insets = {left = "11", right = "12", top = "12", bottom = "11"},
        edgeSize = 32,
        titleSize = 32,
-   });
+   }); ]]
    mainframe:RegisterForDrag("LeftButton");
    mainframe:SetScript("OnDragStart", function(self) mainframe:StartMoving() end)
    mainframe:SetScript("OnDragStop", function(self) mainframe:StopMovingOrSizing() end)
@@ -421,6 +423,21 @@ function MysticExtended:OnEnable()
     else
         MysticExtendedFrame:Hide();
         MysticExtendedOptions_FloatSetting:SetChecked(false);
+    end
+
+    for i,v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
+        if not v[GetRealmName()] then
+            v[GetRealmName()] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};
+        end
+        if type(v.enableDisenchant) == "boolean" then
+            v.enableDisenchant = nil;
+        end
+        if type(v.enableRoll) == "boolean" then
+            v.enableRoll = nil;
+        end
+        if type(v.ignoreList) == "boolean" then
+            v.enableRoll = nil;
+        end
     end
 
     if MysticExtendedDB["REFORGE_RETRY_DELAY"] == nil then
