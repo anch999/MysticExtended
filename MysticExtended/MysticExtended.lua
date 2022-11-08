@@ -412,6 +412,22 @@ function MysticExtended:OnInitialize()
     if ( MysticExtendedDB == nil ) then
         MysticExtendedDB = CloneTable(DefaultMysticExtendedDB);
     end
+    realmName = GetRealmName();
+    for _,v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
+        if v[realmName] == nil then
+            v[realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};
+        end
+        --clean up for old settings
+        if type(v.enableDisenchant) == "boolean" then
+            v.enableDisenchant = nil;
+        end
+        if type(v.enableRoll) == "boolean" then
+            v.enableRoll = nil;
+        end
+        if type(v.ignoreList) == "boolean" then
+            v.enableRoll = nil;
+        end
+    end
 end
 
 function MysticExtended:OnEnable()
@@ -423,21 +439,6 @@ function MysticExtended:OnEnable()
     else
         MysticExtendedFrame:Hide();
         MysticExtendedOptions_FloatSetting:SetChecked(false);
-    end
-    realmName = GetRealmName();
-    for i,v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
-        if not v[realmName] then
-            v[realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};
-        end
-        if type(v.enableDisenchant) == "boolean" then
-            v.enableDisenchant = nil;
-        end
-        if type(v.enableRoll) == "boolean" then
-            v.enableRoll = nil;
-        end
-        if type(v.ignoreList) == "boolean" then
-            v.enableRoll = nil;
-        end
     end
 
     if MysticExtendedDB["REFORGE_RETRY_DELAY"] == nil then
