@@ -95,17 +95,10 @@ local function DisenchantItem(bagID,slotID)
             DEFAULT_CHAT_FRAME:AddMessage("You already know this enchant removed from list");
             MysticExtended_RemoveFound(bagID,slotID);
         else
-            local hideMframe = true;
-            if MysticEnchantingFrame:IsVisible() then
-                hideMframe = false;
-            end
             MysticExtended_RemoveFound(bagID,slotID);
             RequestSlotReforgeExtraction(bagID, slotID);
             local itemLink = MysticExtended:CreateItemLink(GetREInSlot(bagID,slotID));
             DEFAULT_CHAT_FRAME:AddMessage(itemLink.." Has been added to your collection and removed from the list");
-            if hideMframe then
-                MysticEnchantingFrame:Hide()
-            end
         end
     else
         DEFAULT_CHAT_FRAME:AddMessage("You don't have enough Mystic Extract to disenchant that item")
@@ -141,14 +134,19 @@ end
 local function MysticExtended_StopAutoRoll()
     MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
     MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
+    MysticEnchantingFrame:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
     MysticExtended:CancelTimer(MysticExtended.rollTimer);
     MysticExtendedFrame_Menu:SetText("Start Reforge");
     MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
+    MysticExtendedCountDownText:SetText("");
+    MysticExtendedCountDownFrame:Hide();
     AutoOn = false;
 end
 
 function MysticExtended_RollEnchant()
     local bagID, slotID = MysticExtended_FindNextItem();
+        MysticExtendedCountDownFrame:Show();
+        MysticExtendedCountDownText:SetText("You Have "..GetItemCount(98462).." Runes Left");
     if AutoOn and GetItemCount(98462) > 0 and MysticExtended_GetItemID(bagID, slotID) and GetUnitSpeed("player") == 0 then
         MysticExtended:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", EventHandler);
         MysticExtended:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", EventHandler);
@@ -176,6 +174,9 @@ local function MysticExtended_StartAutoRoll()
     if AutoOn then
         MysticExtended_StopAutoRoll();
     else
+        if not MysticEnchantingFrame:IsVisible() then
+            MysticEnchantingFrame:UnregisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
+        end
         if IsMounted() then Dismount() end
         AutoOn = true;
         MysticExtendedFrame_Menu:SetText("Auto Reforging");
@@ -388,6 +389,14 @@ local mainframe = CreateFrame("FRAME", "MysticExtendedFrame", UIParent, nil);
    mainframe:SetScript("OnDragStart", function(self) mainframe:StartMoving() end)
    mainframe:SetScript("OnDragStop", function(self) mainframe:StopMovingOrSizing() end)
 
+local countDownFrame = CreateFrame("FRAME", "MysticExtendedCountDownFrame", UIParrnt, nil);
+   countDownFrame:SetPoint("CENTER",0,200);
+   countDownFrame:SetSize(400,50);
+   countDownFrame:Hide();
+   countDownFrame.fstring = countDownFrame:CreateFontString("MysticExtendedCountDownText","OVERLAY","GameFontNormal");
+   countDownFrame.fstring:Show();
+   countDownFrame.fstring:SetPoint("CENTER",0,0);
+   
 local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticExtendedFrame, "OptionsButtonTemplate");
    reforgebutton:SetSize(100,30);
    reforgebutton:SetPoint("TOP", MysticExtendedFrame, "TOP", 0, -10);
