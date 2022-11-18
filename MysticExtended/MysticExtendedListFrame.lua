@@ -30,7 +30,10 @@ local function setCurrentSelectedList()
     local thisID = this:GetID();
     MysticExtendedDB["currentSelectedList"] = thisID;
     UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,thisID);
-    MysticExtended_ScrollFrameUpdate();
+    local update = MysticExtended_ScrollFrameUpdate();
+        if update then
+            MysticExtended_ScrollFrameUpdate();
+        end
 end
 
 function MysticExtended:MenuInitialize()
@@ -47,7 +50,10 @@ end
 function MysticExtended_ListEnable()
     UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
 	UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,MysticExtendedDB["currentSelectedList"]);
-    MysticExtended_ScrollFrameUpdate();
+    local update = MysticExtended_ScrollFrameUpdate();
+        if update then
+            MysticExtended_ScrollFrameUpdate();
+        end
 end
 
 StaticPopupDialogs["MYSTICEXTENDED_ADDLIST"] = {
@@ -61,7 +67,10 @@ StaticPopupDialogs["MYSTICEXTENDED_ADDLIST"] = {
         UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
         UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,#MysticExtendedDB["EnchantSaveLists"]);
         MysticExtendedDB["currentSelectedList"] = #MysticExtendedDB["EnchantSaveLists"];
-        MysticExtended_ScrollFrameUpdate();
+        local update = MysticExtended_ScrollFrameUpdate();
+        if update then
+            MysticExtended_ScrollFrameUpdate();
+        end
     end,
     timeout = 0,
     whileDead = true,
@@ -80,7 +89,10 @@ StaticPopupDialogs["MYSTICEXTENDED_EDITLISTNAME"] = {
         if text ~= "" then
             MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]].Name = text;
             UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
-            MysticExtended_ScrollFrameUpdate();
+            local update = MysticExtended_ScrollFrameUpdate();
+            if update then
+                MysticExtended_ScrollFrameUpdate();
+            end
         end
     end,
     timeout = 0,
@@ -99,7 +111,10 @@ StaticPopupDialogs["MYSTICEXTENDED_DELETELIST"] = {
         UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
         UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,1);
         MysticExtendedDB["currentSelectedList"] = 1;
-        MysticExtended_ScrollFrameUpdate();
+        local update = MysticExtended_ScrollFrameUpdate();
+        if update then
+            MysticExtended_ScrollFrameUpdate();
+        end
     end,
     timeout = 0,
     whileDead = true,
@@ -236,11 +251,15 @@ function MysticExtended_ScrollFrameUpdate()
 	local offset = FauxScrollFrame_GetOffset(scrollFrame.scrollBar);
 	for i = 1, MAX_ROWS do
 		local value = i + offset
+        if not MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]] then
+            tremove(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]],value);
+            return true
+        end
         scrollFrame.rows[i]:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD");
 		if value <= maxValue and MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value] ~= nil then
 			local row = scrollFrame.rows[i]
-            local _, _, _, qualityColor = GetItemQualityColor(MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]].quality)
-            row:SetText(qualityColor..MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]].spellName)
+            local qualityColor = select(4,GetItemQualityColor(MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]].quality))
+            row:SetText(qualityColor..GetSpellInfo(MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]].spellID))
             row.enchantID = MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]
             row.link = MysticExtended:CreateItemLink(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1])
 			row:Show()
@@ -255,11 +274,17 @@ scrollSlider:SetPoint("TOPLEFT", 0, -8)
 scrollSlider:SetPoint("BOTTOMRIGHT", -30, 8)
 scrollSlider:SetScript("OnVerticalScroll", function(self, offset)
     self.offset = math.floor(offset / ROW_HEIGHT + 0.5)
-        MysticExtended_ScrollFrameUpdate()
+    local update = MysticExtended_ScrollFrameUpdate();
+        if update then
+            MysticExtended_ScrollFrameUpdate();
+        end
 end)
 
 scrollSlider:SetScript("OnShow", function()
-    MysticExtended_ScrollFrameUpdate()
+    local update = MysticExtended_ScrollFrameUpdate();
+        if update then
+            MysticExtended_ScrollFrameUpdate();
+        end
 end)
 
 scrollFrame.scrollBar = scrollSlider
@@ -274,7 +299,10 @@ local rows = setmetatable({}, { __index = function(t, i)
         if MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][itemNum] then
             table.remove(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]],itemNum)
         end
-        MysticExtended_ScrollFrameUpdate()
+        local update = MysticExtended_ScrollFrameUpdate();
+        if update then
+            MysticExtended_ScrollFrameUpdate();
+        end
     end)
     row:SetScript("OnEnter", function(self)
         ItemTemplate_OnEnter(self)
@@ -293,7 +321,7 @@ end })
 scrollFrame.rows = rows
 
 function MysticExtended:CreateItemLink(id)
-    local _, _, _, qualityColor = GetItemQualityColor(MYSTIC_ENCHANTS[id].quality)
+    local qualityColor = select(4,GetItemQualityColor(MYSTIC_ENCHANTS[id].quality))
     local link = qualityColor.."|Hspell:"..MYSTIC_ENCHANTS[id].spellID.."|h["..MYSTIC_ENCHANTS[id].spellName.."]|h|r"
     return link
 end
@@ -313,7 +341,10 @@ hooksecurefunc("ChatEdit_InsertLink", function(link)
             end
                 if not GetSavedEnchant(id) then
                     tinsert(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]],{id})
-                    MysticExtended_ScrollFrameUpdate()
+                    local update = MysticExtended_ScrollFrameUpdate();
+                    if update then
+                        MysticExtended_ScrollFrameUpdate();
+                    end
                 end
         return true
         end

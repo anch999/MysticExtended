@@ -127,7 +127,10 @@ local function MysticExtended_FindNextItem()
                     elseif enableRoll and ignoreList ~= true then
                         if enableDisenchant then
                             DisenchantItem(b,s);
-                            MysticExtended_ScrollFrameUpdate();
+                            local update = MysticExtended_ScrollFrameUpdate();
+                            if update then
+                                MysticExtended_ScrollFrameUpdate();
+                            end
                         end
                     elseif  enableRoll and ignoreList then
                         return b, s;
@@ -279,7 +282,7 @@ function MysticExtended:RollMenuRegister(self)
                             'checked', MysticExtendedDB["RollByQuality"]
                         )
                     for k,v in ipairs(value) do
-                        local _, _, _, qualityColor = GetItemQualityColor(v[3])
+                        local qualityColor = select(4,GetItemQualityColor(v[3]))
                         MysticExtended_DewdropMenu:AddLine(
                             'text', qualityColor..v[1],
                             'arg1', k,
@@ -436,7 +439,7 @@ local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticEx
         if IsShiftKeyDown() then
             MysticExtended_Secure:Show();
         else
-            if not IsAltKeyDown() then GameTooltip:SetOwner(this, "ANCHOR_RIGHT") end
+            if not IsAltKeyDown() and not IsShiftKeyDown() then GameTooltip:SetOwner(this, "ANCHOR_RIGHT") end
             GameTooltip:AddLine("Left Click To Start Reforging");
             GameTooltip:AddLine("Shift Left Click To Drop An Atlar");
             GameTooltip:AddLine("Right Click To Show Roll Settings");
@@ -490,16 +493,7 @@ local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticEx
     secureBttn:SetScript("OnKeyUp", function() MysticExtended_Secure:Hide() end);
     secureBttn:SetScript("OnLeave", function()
         MysticExtended_Secure:Hide();
-        GameTooltip:Hide();
     end);
-    secureBttn:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("Left Click To Start Reforging");
-        GameTooltip:AddLine("Shift Left Click To Drop An Atlar");
-        GameTooltip:AddLine("Right Click To Show Roll Settings");
-        GameTooltip:AddLine("Alt Right To Open Enchanting Frame");
-        GameTooltip:Show();
-	end);
 
 function CloneTable(t)				-- return a copy of the table t
 	local new = {};					-- create a new table
@@ -571,13 +565,6 @@ function MysticExtended:OnEnable()
         MysticExtendedOptions_FloatSetting:SetChecked(true);
     else
         MysticExtendedOptions_FloatSetting:SetChecked(false);
-    end
-    if MYSTIC_ENCHANTS then
-        for k,v in pairs(MYSTIC_ENCHANTS) do
-            if v.enchantID ~= 0 then
-               v.spellName = GetSpellInfo(v.spellID)
-            end
-         end
     end
     MysticExtended_DelaySlider:SetValue(MysticExtendedDB["REFORGE_RETRY_DELAY"]);
 end
