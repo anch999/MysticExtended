@@ -124,6 +124,7 @@ StaticPopupDialogs["MYSTICEXTENDED_DELETELIST"] = {
 }
 
 local function exportString()
+    MysticExtended_OptionsMenu:Close();
     local data = {};
     for i,v in ipairs(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]]) do
         tinsert(data,{v[1]});
