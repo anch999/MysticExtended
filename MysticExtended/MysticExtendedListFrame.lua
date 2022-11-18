@@ -12,35 +12,41 @@ local mainframe = CreateFrame("FRAME", "MysticExtendedListFrame", MysticEnchanti
     function()
         if MysticEnchantingFrame:IsVisible() then
             MysticExtendedDB.ListFrameLastState = false;
-            MysticExtended_ShowButton:SetText("Show MysticExtended");
+            MysticExtended_ShowButton:SetText("Show");
+            MysticEnchantingFrame.MysticExtendedText:Show();
         end
     end)
 
-local function setCurrentSelectedList(name)
+MysticEnchantingFrame.MysticExtendedText = MysticEnchantingFrame:CreateFontString();
+MysticEnchantingFrame.MysticExtendedText:SetFont("Fonts\\FRIZQT__.TTF", 12)
+MysticEnchantingFrame.MysticExtendedText:SetFontObject(GameFontNormal)
+MysticEnchantingFrame.MysticExtendedText:SetText("Mystic Extended");
+MysticEnchantingFrame.MysticExtendedText:SetPoint("TOPRIGHT", -70, -11);
+MysticEnchantingFrame.MysticExtendedText:SetShadowOffset(1,-1);
+
+local realmName = GetRealmName();
+
+local function setCurrentSelectedList()
     local thisID = this:GetID();
-    MysticExtendedDB["currentSelectedList"] = name;
+    MysticExtendedDB["currentSelectedList"] = thisID;
     UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,thisID);
     MysticExtended_ScrollFrameUpdate();
 end
 
-local function MysticExtended_Menu_Initialize()
+function MysticExtended:MenuInitialize()
         local info;
-        local menuID = 1
-        for k,v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
+        for k,v in ipairs(MysticExtendedDB["EnchantSaveLists"]) do
                     info = {
                         text = v.Name;
-                        func = function() setCurrentSelectedList(v.Name) end;
+                        func = function() setCurrentSelectedList() end;
                     };
-                    MysticExtendedDB["EnchantSaveLists"][v.Name].menuID = menuID
-                    menuID = menuID + 1
                     UIDropDownMenu_AddButton(info);
         end
 end
 
 function MysticExtended_ListEnable()
-    MysticExtendedDB["currentSelectedList"] = MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]].Name;
-    UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended_Menu_Initialize);
-	UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]].menuID);
+    UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
+	UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,MysticExtendedDB["currentSelectedList"]);
     MysticExtended_ScrollFrameUpdate();
 end
 
@@ -51,10 +57,10 @@ StaticPopupDialogs["MYSTICEXTENDED_ADDLIST"] = {
     hasEditBox = true,
     OnAccept = function (self, data, data2)
         local text = self.editBox:GetText()
-        MysticExtendedDB["EnchantSaveLists"][text] = {["Name"] = text, [GetRealmName()] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}; }
-        UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended_Menu_Initialize);
-        UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,MysticExtendedDB["EnchantSaveLists"][text].menuID);
-        MysticExtendedDB["currentSelectedList"] = text;
+        MysticExtendedDB["EnchantSaveLists"][text] = {["Name"] = text, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}; }
+        UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
+        UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,#MysticExtendedDB["EnchantSaveLists"]);
+        MysticExtendedDB["currentSelectedList"] = #MysticExtendedDB["EnchantSaveLists"];
         MysticExtended_ScrollFrameUpdate();
     end,
     timeout = 0,
@@ -72,12 +78,8 @@ StaticPopupDialogs["MYSTICEXTENDED_EDITLISTNAME"] = {
     OnAccept = function (self, data, data2)
         local text = self.editBox:GetText()
         if text ~= "" then
-            MysticExtendedDB["EnchantSaveLists"][text] = MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]]
-            MysticExtendedDB["EnchantSaveLists"][text].Name = text;
-            MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]] = nil
-            UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended_Menu_Initialize);
-            UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,MysticExtendedDB["EnchantSaveLists"][text].menuID);
-            MysticExtendedDB["currentSelectedList"] = text;
+            MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]].Name = text;
+            UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
             MysticExtended_ScrollFrameUpdate();
         end
     end,
@@ -93,10 +95,10 @@ StaticPopupDialogs["MYSTICEXTENDED_DELETELIST"] = {
     button1 = "Confirm",
     button2 = "Cancel",
     OnAccept = function (self, data, data2)
-        MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]] = nil;
-        UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended_Menu_Initialize);
+        tremove(MysticExtendedDB["EnchantSaveLists"], MysticExtendedDB["currentSelectedList"]);
+        UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
         UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,1);
-        MysticExtendedDB["currentSelectedList"] = UIDropDownMenu_GetText(MysticExtended_ListDropDown);
+        MysticExtendedDB["currentSelectedList"] = 1;
         MysticExtended_ScrollFrameUpdate();
     end,
     timeout = 0,
@@ -106,9 +108,50 @@ StaticPopupDialogs["MYSTICEXTENDED_DELETELIST"] = {
     enterClicksFirstButton = true,
 }
 
+local function exportString()
+    local data = {};
+    for i,v in ipairs(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]]) do
+        tinsert(data,{v[1]});
+    end
+    data["Name"] = MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]]["Name"];
+    Internal_CopyToClipboard("MEXT:"..MysticExtended:Serialize(data));
+end
 
-local function MysticExtended_ListOnClick()
-
+function MysticExtended:ListFrameMenuRegister(self)
+	MysticExtended_OptionsMenu:Register(self,
+        'point', function(parent)
+            return "TOP", "BOTTOM"
+        end,
+        'children', function(level, value)
+            if level == 1 then
+                MysticExtended_OptionsMenu:AddLine(
+                    'text', "Send Current List",
+                    'func', function() StaticPopup_Show("MYSTICEXTENDED_SEND_ENCHANTLIST",MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]].Name) end,
+                    'notCheckable', true
+                )
+                MysticExtended_OptionsMenu:AddLine(
+                    'text', "Export List",
+                    'func', exportString,
+                    'tooltip', "Exports a string to clipboard",
+                    'notCheckable', true
+                )
+                MysticExtended_OptionsMenu:AddLine(
+                    'text', "Import List",
+                    'func', function() StaticPopup_Show("MYSTICEXTENDED_IMPORT_ENCHANTLIST") end,
+                    'notCheckable', true
+                )
+                MysticExtended_OptionsMenu:AddLine(
+					'text', "Close Menu",
+                    'textR', 0,
+                    'textG', 1,
+                    'textB', 1,
+					'func', function() MysticExtended_OptionsMenu:Close() end,
+					'notCheckable', true
+				)
+            end
+		end,
+		'dontHook', true
+	)
 end
 
 local listDropdown = CreateFrame("Button", "MysticExtended_ListDropDown", MysticExtendedListFrame, "UIDropDownMenuTemplate");
@@ -116,7 +159,7 @@ local listDropdown = CreateFrame("Button", "MysticExtended_ListDropDown", Mystic
     listDropdown:SetScript("OnClick", MysticExtended_ListOnClick);
     UIDropDownMenu_SetWidth(MysticExtended_ListDropDown,155)
 
-local editlistnamebtn = CreateFrame("Button", "MysticExtended_RemoveListBtn", MysticExtendedListFrame, "OptionsButtonTemplate");
+local editlistnamebtn = CreateFrame("Button", "MysticExtended_EditListBtn", MysticExtendedListFrame, "OptionsButtonTemplate");
     editlistnamebtn:SetPoint("TOPLEFT", 195, -41);
     editlistnamebtn:SetText("E")
     editlistnamebtn:SetSize(27, 27);
@@ -262,7 +305,6 @@ hooksecurefunc("ChatEdit_InsertLink", function(link)
         MysticExtendedOptions_AddIDeditbox:SetText(id);
     else
         if MysticExtendedListFrame:IsVisible() then
-            
             if link:match("item:") then
                 id = GetREInSlot(GetMouseFocus():GetParent():GetID(), GetMouseFocus():GetID())
             else
@@ -270,7 +312,7 @@ hooksecurefunc("ChatEdit_InsertLink", function(link)
                 id = MYSTIC_ENCHANT_SPELLS[id]
             end
                 if not GetSavedEnchant(id) then
-                    table.insert(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]],{id})
+                    tinsert(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]],{id})
                     MysticExtended_ScrollFrameUpdate()
                 end
         return true
@@ -280,30 +322,46 @@ end)
 
 ------------------------------------------------------------------
 --Reforge button in list interface
-local reforgebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameReforgeButton", MysticExtendedListFrame, "OptionsButtonTemplate");
-    reforgebuttonlist:SetSize(133,30);
-    reforgebuttonlist:SetPoint("BOTTOMLEFT", MysticExtendedListFrame, "BOTTOMLEFT", 20, 20);
+local reforgebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameReforgeButton", MysticEnchantingFrame, "OptionsButtonTemplate");
+    reforgebuttonlist:SetSize(100,26);
+    reforgebuttonlist:SetPoint("TOP", MysticEnchantingFrame, "TOP", 230, -33);
     reforgebuttonlist:SetText("Start Reforge");
     reforgebuttonlist:RegisterForClicks("LeftButtonDown", "RightButtonDown");
     reforgebuttonlist:SetScript("OnClick", function(self, btnclick, down) MysticExtended_OnClick(self,btnclick) end);
---Options button in the list interface
+
+--Shows a menu with options and sharing options
+local sharebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameMenuButton", MysticExtendedListFrame, "OptionsButtonTemplate");
+    sharebuttonlist:SetSize(133,30);
+    sharebuttonlist:SetPoint("BOTTOMRIGHT", MysticExtendedListFrame, "BOTTOMRIGHT", -20, 20);
+    sharebuttonlist:SetText("Export/Share");
+    sharebuttonlist:RegisterForClicks("LeftButtonDown");
+    sharebuttonlist:SetScript("OnClick", function(self)
+        if MysticExtended_OptionsMenu:IsOpen() then
+            MysticExtended_OptionsMenu:Close();
+        else
+            MysticExtended:ListFrameMenuRegister(self);
+            MysticExtended_OptionsMenu:Open(this);
+        end
+    end);
+
 local optionsbuttonlist = CreateFrame("Button", "MysticExtended_ListFrameOptionsButton", MysticExtendedListFrame, "OptionsButtonTemplate");
     optionsbuttonlist:SetSize(133,30);
-    optionsbuttonlist:SetPoint("BOTTOMRIGHT", MysticExtendedListFrame, "BOTTOMRIGHT", -20, 20);
+    optionsbuttonlist:SetPoint("BOTTOMLEFT", MysticExtendedListFrame, "BOTTOMLEFT", 20, 20);
     optionsbuttonlist:SetText("Options");
     optionsbuttonlist:RegisterForClicks("LeftButtonDown");
-    optionsbuttonlist:SetScript("OnClick", function() MysticExtendedOptions_Toggle() end);
+    optionsbuttonlist:SetScript("OnClick", function() MysticExtended:OptionsToggle() end);
+
 --Show/Hide button in main list view
 local showFrameBttn = CreateFrame("Button", "MysticExtended_ShowButton", MysticEnchantingFrame, "OptionsButtonTemplate");
-    showFrameBttn:SetSize(165,26);
-    showFrameBttn:SetPoint("TOP", MysticEnchantingFrame, "TOP", 265, -33);
+    showFrameBttn:SetSize(80,26);
+    showFrameBttn:SetPoint("TOP", MysticEnchantingFrame, "TOP", 320, -33);
     showFrameBttn:SetScript("OnClick", function()
         if MysticExtendedListFrame:IsVisible() then
             MysticExtendedListFrame:Hide();
             MysticExtendedDB.ListFrameLastState = false;
-            showFrameBttn:SetText("Show MysticExtended");
+            showFrameBttn:SetText("Show");
         else
-            showFrameBttn:SetText("Hide MysticExtended");
+            showFrameBttn:SetText("Hide");
             MysticExtendedListFrame:Show();
             MysticExtendedDB.ListFrameLastState = true;
         end
@@ -320,10 +378,10 @@ MysticEnchantingFrame:HookScript("OnShow",
         function()
             if MysticExtendedDB.ListFrameLastState then
                 MysticExtendedListFrame:Show();
-                showFrameBttn:SetText("Hide MysticExtended");
+                showFrameBttn:SetText("Hide");
             else
                 MysticExtendedListFrame:Hide();
-                showFrameBttn:SetText("Show MysticExtended");
+                showFrameBttn:SetText("Show");
             end
         end)
 --Hide it when it closes

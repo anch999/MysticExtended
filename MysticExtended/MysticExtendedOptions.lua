@@ -1,8 +1,10 @@
 
-function MysticExtendedOptions_Toggle()
+function MysticExtended:OptionsToggle()
     if InterfaceOptionsFrame:IsVisible() then
 		InterfaceOptionsFrame:Hide();
 	else
+		MysticExtended_OptionsMenu:Close();
+		Collections:Hide();
 		InterfaceOptionsFrame_OpenToCategory("MysticExtended");
 	end
 end
@@ -10,7 +12,6 @@ end
 local function MysticExtendedOptions_Menu_OnClick()
     local thisID = this:GetID();
 	UIDropDownMenu_SetSelectedID(MysticExtendedOptions_Menu, thisID);
-
 end
 
 local function MysticExtendedOptions_Menu_Initialize()
@@ -41,7 +42,7 @@ local function AddIdButton()
 	end
 	local text = tonumber(MysticExtendedOptions_AddIDeditbox:GetText());
 	if not checkID(text) and GetItemInfo(text) then
-		table.insert(MysticExtendedDB["ReRollItems"],text)
+		tinsert(MysticExtendedDB["ReRollItems"],text)
 	end
 end
 
@@ -114,3 +115,31 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	hideFloat.Lable:SetPoint("LEFT", 30, 0);
 	hideFloat.Lable:SetText("Show/Hide Floating Button");
 	hideFloat:SetScript("OnClick", function() MysticExtended:ButtonEnable() end);
+
+	local enableShare = CreateFrame("CheckButton", "MysticExtendedOptions_EnableShare", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	enableShare:SetPoint("TOPLEFT", 15, -205);
+	enableShare.Lable = enableShare:CreateFontString(nil , "BORDER", "GameFontNormal");
+	enableShare.Lable:SetJustifyH("LEFT");
+	enableShare.Lable:SetPoint("LEFT", 30, 0);
+	enableShare.Lable:SetText("Enable Enchant List Shareing");
+	enableShare:SetScript("OnClick", function() 
+		if MysticExtendedDB["AllowShareEnchantList"] then
+			MysticExtendedDB["AllowShareEnchantList"] = false
+		else
+			MysticExtendedDB["AllowShareEnchantList"] = true
+		end
+	end);
+
+	local enableInCombat = CreateFrame("CheckButton", "MysticExtendedOptions_EnableShareCombat", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	enableInCombat:SetPoint("TOPLEFT", 15, -240);
+	enableInCombat.Lable = enableInCombat:CreateFontString(nil , "BORDER", "GameFontNormal");
+	enableInCombat.Lable:SetJustifyH("LEFT");
+	enableInCombat.Lable:SetPoint("LEFT", 30, 0);
+	enableInCombat.Lable:SetText("Auto Reject Enchant List Shareing In Combat");
+	enableInCombat:SetScript("OnClick", function()
+		if MysticExtendedDB["AllowShareEnchantListInCombat"] then
+			MysticExtendedDB["AllowShareEnchantListInCombat"] = false
+		else
+			MysticExtendedDB["AllowShareEnchantListInCombat"] = true
+		end
+	end);

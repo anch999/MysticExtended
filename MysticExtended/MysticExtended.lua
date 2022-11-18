@@ -1,14 +1,14 @@
-MysticExtended = LibStub("AceAddon-3.0"):NewAddon("MysticExtended", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceSerializer-3.0", "AceTimer-3.0")
+MysticExtended = LibStub("AceAddon-3.0"):NewAddon("MysticExtended", "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceSerializer-3.0", "AceComm-3.0")
 
 MysticExtended_DewdropMenu = AceLibrary("Dewdrop-2.0");
-
+local realmName = GetRealmName();
 --Set Savedvariables defaults
 local RollExtracts = false;
 local DefaultMysticExtendedDB  = {
-["EnchantSaveLists"] = {["Enchant List 1"] = {["menuID"] = 1,["Name"] = "Enchant List 1"}},
+["EnchantSaveLists"] = {[1] = {["Name"] = "Enchant List 1", [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}}},
 ["ReRollItems"] = {18863, 18853,992720},
 ["ListFrameLastState"] = false,
-["currentSelectedList"] = "Enchant List 1",
+["currentSelectedList"] = 1,
 ["RollByQuality"] = true,
 ["ButtonEnable"] = true,
 ["QualityList"] = {
@@ -19,14 +19,14 @@ local DefaultMysticExtendedDB  = {
 },
 ["REFORGE_RETRY_DELAY"] = 5,
 };
-local realmName = GetRealmName();
+
 local function MysticExtended_DoSaveList(bagID, slotID)
     local enchantID = GetREInSlot(bagID, slotID)
-        for i , v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
+        for i , v in ipairs(MysticExtendedDB["EnchantSaveLists"]) do
             if v[realmName]["enableRoll"] then
                 for a , b in ipairs(v) do
                     if b[1] == enchantID then
-                        return v.Name,a,v[realmName]["enableDisenchant"],v[realmName]["enableRoll"],v[realmName]["ignoreList"]
+                        return i,a,v[realmName]["enableDisenchant"],v[realmName]["enableRoll"],v[realmName]["ignoreList"]
                     end
                 end
             end
@@ -58,12 +58,23 @@ function MysticExtended:Repeat()
     MysticExtended_RollEnchant();
 end
 
+local function MysticExtended_StopAutoRoll()
+    MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
+    MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
+    MysticEnchantingFrame:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
+    MysticExtended:CancelTimer(MysticExtended.rollTimer);
+    MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
+    MysticExtendedFrame_Menu.Text:SetText("|cffffffffStart\nReforge");
+    MysticExtendedCountDownText:SetText("");
+    MysticExtendedCountDownFrame:Hide();
+    MysticExtendedFrame_Menu_Icon_Breathing:Hide();
+    AutoOn = false;
+end
+
 local function EventHandler(event, unitID, spell)
     if unitID == "player" and spell == "Enchanting" then
         if event == "UNIT_SPELLCAST_INTERRUPTED" then
-            AutoOn = false;
-            MysticExtendedFrame_Menu:SetText("Start Reforge");
-            MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
+            MysticExtended_StopAutoRoll();
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
             MysticExtended:CancelTimer(MysticExtended.rollTimer);
             MysticExtended:ScheduleTimer(MysticExtended_RollEnchant, tonumber(MysticExtendedDB["REFORGE_RETRY_DELAY"] / 10));
@@ -131,18 +142,6 @@ local function MysticExtended_FindNextItem()
     end
 end
 
-local function MysticExtended_StopAutoRoll()
-    MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
-    MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
-    MysticEnchantingFrame:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
-    MysticExtended:CancelTimer(MysticExtended.rollTimer);
-    MysticExtendedFrame_Menu:SetText("Start Reforge");
-    MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
-    MysticExtendedCountDownText:SetText("");
-    MysticExtendedCountDownFrame:Hide();
-    AutoOn = false;
-end
-
 function MysticExtended_RollEnchant()
     local bagID, slotID = MysticExtended_FindNextItem();
         MysticExtendedCountDownFrame:Show();
@@ -179,9 +178,11 @@ local function MysticExtended_StartAutoRoll()
         end
         if IsMounted() then Dismount() end
         AutoOn = true;
-        MysticExtendedFrame_Menu:SetText("Auto Reforging");
+        MysticExtendedFrame_Menu_Icon_Breathing:Show();
         MysticExtended_ListFrameReforgeButton:SetText("Auto Reforging");
+        MysticExtendedFrame_Menu.Text:SetText("|cffffffffAuto\nForging");
         MysticExtended_RollEnchant();
+
     end
 end
 
@@ -215,9 +216,11 @@ end
 function MysticExtended:ButtonEnable()
     if MysticExtendedDB["ButtonEnable"] then
         MysticExtendedFrame:Hide();
+        MysticExtendedFrame_Menu:Hide();
         MysticExtendedDB["ButtonEnable"] = false
     else
         MysticExtendedFrame:Show();
+        MysticExtendedFrame_Menu:Show();
         MysticExtendedDB["ButtonEnable"] = true
     end
 end
@@ -230,7 +233,12 @@ local function RollExtractsEnable()
     end
 end
 
-function MysticExtended_DewdropMenuRegister(self)
+local function realmCheck(table)
+    if table[realmName] then return end
+    table[realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};    
+end
+
+function MysticExtended:RollMenuRegister(self)
 	MysticExtended_DewdropMenu:Register(self,
         'point', function(parent)
             return "TOP", "BOTTOM"
@@ -281,11 +289,12 @@ function MysticExtended_DewdropMenuRegister(self)
                         )
                     end
                 elseif value == MysticExtendedDB["EnchantSaveLists"] then
-                    for k,v in pairs(value) do
+                    for i,v in ipairs(value) do
+                        realmCheck(v);
                         MysticExtended_DewdropMenu:AddLine(
                             'text', v.Name,
                             'hasArrow', true,
-                            'value', v,
+                            'value', {v,i},
                             'notCheckable', true
                         )
                     end
@@ -319,26 +328,26 @@ function MysticExtended_DewdropMenuRegister(self)
             elseif level == 3 then
                 MysticExtended_DewdropMenu:AddLine(
                     'text', "Enable List",
-                    'arg1', value.Name,
+                    'arg1', value[2],
                     'arg2', "enableRoll",
                     'func', EnableClick,
-                    'checked', value[realmName]["enableRoll"]
+                    'checked', value[1][realmName]["enableRoll"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
                     'text', "Disenchant to Collection and remove from list",
-                    'arg1', value.Name,
+                    'arg1', value[2],
                     'arg2', "enableDisenchant",
                     'arg3', "ignoreList",
                     'func', EnableClick,
-                    'checked', value[realmName]["enableDisenchant"]
+                    'checked', value[1][realmName]["enableDisenchant"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
                     'text', "ReRoll items on this list when found",
-                    'arg1', value.Name,
+                    'arg1', value[2],
                     'arg2', "ignoreList",
                     'arg3', "enableDisenchant",
                     'func', EnableClick,
-                    'checked', value[realmName]["ignoreList"]
+                    'checked', value[1][realmName]["ignoreList"]
                 )
                 MysticExtended_DewdropMenu:AddLine(
 				    'text', "Close Menu",
@@ -364,7 +373,7 @@ function MysticExtended_OnClick(self,arg1)
             if IsAltKeyDown() then
                 MysticEnchantingFrame:Display();
             else
-            MysticExtended_DewdropMenuRegister(self);
+            MysticExtended:RollMenuRegister(self);
             MysticExtended_DewdropMenu:Open(this);
             end
         end
@@ -373,38 +382,126 @@ end
 
 --Creates the main floating button
 local mainframe = CreateFrame("FRAME", "MysticExtendedFrame", UIParent, nil);
-   mainframe:SetPoint("CENTER",0,0);
-   mainframe:SetSize(120,50);
-   mainframe:EnableMouse(true);
-   mainframe:SetMovable(true);
-   --[[ mainframe:SetBackdrop({
-       bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
-       edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
-       tile = "true",
-       insets = {left = "11", right = "12", top = "12", bottom = "11"},
-       edgeSize = 32,
-       titleSize = 32,
-   }); ]]
-   mainframe:RegisterForDrag("LeftButton");
-   mainframe:SetScript("OnDragStart", function(self) mainframe:StartMoving() end)
-   mainframe:SetScript("OnDragStop", function(self) mainframe:StopMovingOrSizing() end)
+    mainframe:SetPoint("CENTER",0,0);
+    mainframe:SetSize(70,70);
+    mainframe:EnableMouse(true);
+    mainframe:SetMovable(true);
+    --[[ mainframe:SetBackdrop({
+        bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
+        edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
+        tile = "true",
+        insets = {left = "11", right = "12", top = "12", bottom = "11"},
+        edgeSize = 32,
+        titleSize = 32,
+    }); ]]
+    mainframe:RegisterForDrag("LeftButton");
+    mainframe:SetScript("OnDragStart", function(self) mainframe:StartMoving() end);
+    mainframe:SetScript("OnDragStop", function(self) mainframe:StopMovingOrSizing() end);
+    mainframe:Hide();
 
 local countDownFrame = CreateFrame("FRAME", "MysticExtendedCountDownFrame", UIParrnt, nil);
-   countDownFrame:SetPoint("CENTER",0,200);
-   countDownFrame:SetSize(400,50);
-   countDownFrame:Hide();
-   countDownFrame.fstring = countDownFrame:CreateFontString("MysticExtendedCountDownText","OVERLAY","GameFontNormal");
-   countDownFrame.fstring:Show();
-   countDownFrame.fstring:SetPoint("CENTER",0,0);
-   
-local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticExtendedFrame, "OptionsButtonTemplate");
-   reforgebutton:SetSize(100,30);
-   reforgebutton:SetPoint("TOP", MysticExtendedFrame, "TOP", 0, -10);
-   reforgebutton:SetText("Start Reforge");
-   reforgebutton:RegisterForClicks("LeftButtonDown", "RightButtonDown");
-   reforgebutton:SetScript("OnClick", function(self, btnclick, down) MysticExtended_OnClick(self,btnclick) end);
+    countDownFrame:SetPoint("CENTER",0,200);
+    countDownFrame:SetSize(400,50);
+    countDownFrame:Hide();
+    countDownFrame.cText = countDownFrame:CreateFontString("MysticExtendedCountDownText","OVERLAY","GameFontNormal");
+    countDownFrame.cText:Show();
+    countDownFrame.cText:SetPoint("CENTER",0,0);
+    countDownFrame.rollingText = countDownFrame:CreateFontString("MysticExtendedRollingText","OVERLAY","GameFontNormal");
+    countDownFrame.rollingText:Show();
+    countDownFrame.rollingText:SetPoint("CENTER",0,20);
+    countDownFrame.rollingText:SetText("Auto Reforging In Progress");
 
-local function CloneTable(t)				-- return a copy of the table t
+local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticExtendedFrame);
+    reforgebutton:SetSize(55,55);
+    reforgebutton:SetPoint("TOP", MysticExtendedFrame, "TOP", 0, -10);
+    reforgebutton.icon = reforgebutton:CreateTexture("MysticExtendedFrame_Menu_Icon","ARTWORK");
+    reforgebutton.icon:SetSize(55,55);
+    reforgebutton.icon:SetPoint("TOPLEFT", "MysticExtendedFrame_Menu","TOPLEFT",1,-1);
+    reforgebutton.icon:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\inv_blacksmithing_khazgoriananvil1");
+    reforgebutton.AnimatedTex = reforgebutton:CreateTexture("MysticExtendedFrame_Menu_Icon_Breathing", "OVERLAY");
+    reforgebutton.AnimatedTex:SetSize(59,59);
+    reforgebutton.AnimatedTex:SetPoint("CENTER", reforgebutton.icon, 0, 0);
+    reforgebutton.AnimatedTex:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\Slot2Selected");
+    reforgebutton.AnimatedTex:SetAlpha(0);
+    reforgebutton.AnimatedTex:Hide();
+    reforgebutton.Highlight = reforgebutton:CreateTexture("MysticExtendedFrame_Menu_Icon_Highlight", "OVERLAY");
+    reforgebutton.Highlight:SetSize(59,59);
+    reforgebutton.Highlight:SetPoint("CENTER", reforgebutton.icon, 0, 0);
+    reforgebutton.Highlight:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\Slot2Selected");
+    reforgebutton.Highlight:Hide();
+    reforgebutton:RegisterForClicks("LeftButtonDown", "RightButtonDown");
+    reforgebutton:SetScript("OnClick", function(self, btnclick, down) MysticExtended_OnClick(self,btnclick) end);
+    reforgebutton:SetScript("OnEnter", function()
+        reforgebutton.Highlight:Show();
+        if IsShiftKeyDown() then
+            MysticExtended_Secure:Show();
+        else
+            if not IsAltKeyDown() then GameTooltip:SetOwner(this, "ANCHOR_RIGHT") end
+            GameTooltip:AddLine("Left Click To Start Reforging");
+            GameTooltip:AddLine("Shift Left Click To Drop An Atlar");
+            GameTooltip:AddLine("Right Click To Show Roll Settings");
+            GameTooltip:AddLine("Alt Right To Open Enchanting Frame");
+            GameTooltip:Show();
+        end
+	end);
+	reforgebutton:SetScript("OnLeave", function()
+        reforgebutton.Highlight:Hide();
+        GameTooltip:Hide();
+    end);
+    reforgebutton:Hide();
+    reforgebutton.Text = reforgebutton:CreateFontString();
+    reforgebutton.Text:SetFont("Fonts\\FRIZQT__.TTF", 12)
+    reforgebutton.Text:SetFontObject(GameFontNormal)
+    reforgebutton.Text:SetText("|cffffffffStart\nReforge");
+    reforgebutton.Text:SetPoint("CENTER", 0, 0);
+    reforgebutton.Text:SetShadowOffset(1,-1);
+    
+    reforgebutton.AnimatedTex.AG = reforgebutton.AnimatedTex:CreateAnimationGroup();
+    reforgebutton.AnimatedTex.AG.Alpha0 = reforgebutton.AnimatedTex.AG:CreateAnimation("Alpha");
+    reforgebutton.AnimatedTex.AG.Alpha0:SetStartDelay(0);
+    reforgebutton.AnimatedTex.AG.Alpha0:SetDuration(2);
+    reforgebutton.AnimatedTex.AG.Alpha0:SetOrder(0);
+    reforgebutton.AnimatedTex.AG.Alpha0:SetEndDelay(0);
+    reforgebutton.AnimatedTex.AG.Alpha0:SetSmoothing("IN");
+    reforgebutton.AnimatedTex.AG.Alpha0:SetChange(1);
+    
+    reforgebutton.AnimatedTex.AG.Alpha1 = reforgebutton.AnimatedTex.AG:CreateAnimation("Alpha");
+    reforgebutton.AnimatedTex.AG.Alpha1:SetStartDelay(0);
+    reforgebutton.AnimatedTex.AG.Alpha1:SetDuration(2);
+    reforgebutton.AnimatedTex.AG.Alpha1:SetOrder(0);
+    reforgebutton.AnimatedTex.AG.Alpha1:SetEndDelay(0);
+    reforgebutton.AnimatedTex.AG.Alpha1:SetSmoothing("IN_OUT");
+    reforgebutton.AnimatedTex.AG.Alpha1:SetChange(-1);
+    
+    reforgebutton.AnimatedTex.AG:SetScript("OnFinished", function()
+        reforgebutton.AnimatedTex.AG:Play();
+    end)
+    
+    reforgebutton.AnimatedTex.AG:Play();
+
+    local secureBttn = CreateFrame("Button", "MysticExtended_Secure", MysticExtendedFrame_Menu, "SecureActionButtonTemplate");
+    secureBttn:SetSize(50,50);
+    secureBttn:SetPoint("CENTER", "MysticExtendedFrame_Menu", "CENTER");
+    secureBttn:SetAttribute("shift-type1", "item");
+    secureBttn:SetAttribute("item","Mystic Enchanting Altar");
+    secureBttn:RegisterForClicks("LeftButtonUp");
+    secureBttn:Hide();
+    secureBttn:SetFrameStrata("DIALOG");
+    secureBttn:SetScript("OnKeyUp", function() MysticExtended_Secure:Hide() end);
+    secureBttn:SetScript("OnLeave", function()
+        MysticExtended_Secure:Hide();
+        GameTooltip:Hide();
+    end);
+    secureBttn:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("Left Click To Start Reforging");
+        GameTooltip:AddLine("Shift Left Click To Drop An Atlar");
+        GameTooltip:AddLine("Right Click To Show Roll Settings");
+        GameTooltip:AddLine("Alt Right To Open Enchanting Frame");
+        GameTooltip:Show();
+	end);
+
+function CloneTable(t)				-- return a copy of the table t
 	local new = {};					-- create a new table
 	local i, v = next(t, nil);		-- i is an index of t, v = t[i]
 	while i do
@@ -422,7 +519,7 @@ function MysticExtended:OnInitialize()
         MysticExtendedDB = CloneTable(DefaultMysticExtendedDB);
     end
     realmName = GetRealmName();
-    for _,v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
+    for _,v in ipairs(MysticExtendedDB["EnchantSaveLists"]) do
         if v[realmName] == nil then
             v[realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};
         end
@@ -437,23 +534,44 @@ function MysticExtended:OnInitialize()
             v.enableRoll = nil;
         end
     end
+    if MysticExtendedDB["Version"] == nil or MysticExtendedDB["Version"] < 110 then
+        MysticExtendedDB["Version"] = 110;
+        local data = {};
+        for _,v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
+            tinsert(data, v);
+        end
+        MysticExtendedDB["EnchantSaveLists"] = {};
+        for _,v in ipairs(data) do
+            tinsert(MysticExtendedDB["EnchantSaveLists"], v);
+        end
+        MysticExtendedDB["currentSelectedList"] = 1;
+    end
+    MysticExtended:RegisterComm("MysticExtendedEnchantList")
 end
 
 function MysticExtended:OnEnable()
     MysticExtended_ListEnable();
     MysticExtended_DropDownInitialize();
-    if MysticExtendedDB["ButtonEnable"] then
-        MysticExtendedFrame:Show();
-        MysticExtendedOptions_FloatSetting:SetChecked(true);
+    if MysticExtendedDB["AllowShareEnchantListInCombat"] then
+        MysticExtendedOptions_EnableShareCombat:SetChecked(true);
     else
-        MysticExtendedFrame:Hide();
-        MysticExtendedOptions_FloatSetting:SetChecked(false);
+        MysticExtendedOptions_EnableShareCombat:SetChecked(false);
     end
-
+    if MysticExtendedDB["AllowShareEnchantList"] then
+        MysticExtendedOptions_EnableShare:SetChecked(true);
+    else
+        MysticExtendedOptions_EnableShare:SetChecked(false);
+    end
     if MysticExtendedDB["REFORGE_RETRY_DELAY"] == nil then
         MysticExtendedDB["REFORGE_RETRY_DELAY"] = 5;
     end
-
+    if MysticExtendedDB["ButtonEnable"] then
+        MysticExtendedFrame:Show();
+        MysticExtendedFrame_Menu:Show();
+        MysticExtendedOptions_FloatSetting:SetChecked(true);
+    else
+        MysticExtendedOptions_FloatSetting:SetChecked(false);
+    end
     if MYSTIC_ENCHANTS then
         for k,v in pairs(MYSTIC_ENCHANTS) do
             if v.enchantID ~= 0 then
