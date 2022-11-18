@@ -252,7 +252,7 @@ function MysticExtended_ScrollFrameUpdate()
 	local offset = FauxScrollFrame_GetOffset(scrollFrame.scrollBar);
 	for i = 1, MAX_ROWS do
 		local value = i + offset
-        if not MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]] then
+        if MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value] and not MYSTIC_ENCHANTS[MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]][value][1]] then
             tremove(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]],value);
             return true
         end
