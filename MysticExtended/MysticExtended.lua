@@ -18,7 +18,25 @@ local DefaultMysticExtendedDB  = {
     [4] = {"Legendary",true,5}
 },
 ["REFORGE_RETRY_DELAY"] = 5,
+["ShowInCity"] = false,
 };
+
+local citysList = {
+    ["Stormwind City"] = true,
+    ["Ironforge"] = true,
+    ["Darnassus"] = true,
+    ["Exodar"] = true,
+    ["Orgrimmar"] = true,
+    ["Silvermoon City"] = true,
+    ["Thunder Bluff"] = true,
+    ["Undercity"] = true,
+    ["Shattrath City"] = true,
+    ["Booty Bay"] = true,
+    ["Everlook‎"] = true,
+    ["Ratchet"] = true,
+    ["Gadgetzan"] = true,
+    ["Dalaran"] = true,
+}
 
 local function MysticExtended_DoSaveList(bagID, slotID)
     local enchantID = GetREInSlot(bagID, slotID)
@@ -81,6 +99,15 @@ local function EventHandler(event, unitID, spell)
         end
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
+    end
+    if event == "ZONE_CHANGED_NEW_AREA" then
+        if MysticExtendedDB["ShowInCity"] and MysticExtendedDB["ButtonEnable"] and citysList[GetRealZoneText()] then
+            MysticExtendedFrame:Show();
+            MysticExtendedFrame_Menu:Show();
+        elseif MysticExtendedDB["ShowInCity"] and MysticExtendedDB["ButtonEnable"] then
+            MysticExtendedFrame:Hide();
+            MysticExtendedFrame_Menu:Hide();
+        end
     end
 end
 
@@ -216,15 +243,40 @@ local function EnableClick(list,cat,cat2)
     end
 end
 
-function MysticExtended:ButtonEnable()
-    if MysticExtendedDB["ButtonEnable"] then
-        MysticExtendedFrame:Hide();
-        MysticExtendedFrame_Menu:Hide();
-        MysticExtendedDB["ButtonEnable"] = false
+function MysticExtended:ButtonEnable(button)
+    if button == "Main" then
+        if MysticExtendedDB["ButtonEnable"] then
+            MysticExtendedFrame:Hide();
+            MysticExtendedFrame_Menu:Hide();
+            MysticExtendedDB["ButtonEnable"] = false
+        else
+            MysticExtendedFrame:Show();
+            MysticExtendedFrame_Menu:Show();
+            MysticExtendedDB["ButtonEnable"] = true
+        end
     else
-        MysticExtendedFrame:Show();
-        MysticExtendedFrame_Menu:Show();
-        MysticExtendedDB["ButtonEnable"] = true
+        if MysticExtendedDB["ShowInCity"] then
+            MysticExtended:UnregisterEvent("ZONE_CHANGED_NEW_AREA");
+            MysticExtendedDB["ShowInCity"] = false
+            if MysticExtendedDB["ButtonEnable"] then
+                MysticExtendedFrame:Show();
+                MysticExtendedFrame_Menu:Show();
+            else
+                MysticExtendedFrame:Hide();
+                MysticExtendedFrame_Menu:Hide();
+            end
+        else
+            MysticExtendedDB["ShowInCity"] = true
+            if MysticExtendedDB["ButtonEnable"] and citysList[GetRealZoneText()] then
+                MysticExtended:RegisterEvent("ZONE_CHANGED_NEW_AREA", EventHandler);
+                MysticExtendedFrame:Show();
+                MysticExtendedFrame_Menu:Show();
+            elseif MysticExtendedDB["ButtonEnable"] then
+                MysticExtended:RegisterEvent("ZONE_CHANGED_NEW_AREA", EventHandler);
+                MysticExtendedFrame:Hide();
+                MysticExtendedFrame_Menu:Hide();
+            end
+        end
     end
 end
 
@@ -559,12 +611,37 @@ function MysticExtended:OnEnable()
     if MysticExtendedDB["REFORGE_RETRY_DELAY"] == nil then
         MysticExtendedDB["REFORGE_RETRY_DELAY"] = 5;
     end
+
     if MysticExtendedDB["ButtonEnable"] then
-        MysticExtendedFrame:Show();
-        MysticExtendedFrame_Menu:Show();
         MysticExtendedOptions_FloatSetting:SetChecked(true);
     else
         MysticExtendedOptions_FloatSetting:SetChecked(false);
+    end
+
+    if MysticExtendedDB["ShowInCity"] and citysList[GetRealZoneText()] then
+        MysticExtendedOptions_FloatCitySetting:SetChecked(true);
+        MysticExtended:RegisterEvent("ZONE_CHANGED_NEW_AREA", EventHandler);
+        if MysticExtendedDB["ButtonEnable"] then
+            MysticExtendedFrame:Show();
+            MysticExtendedFrame_Menu:Show();
+        else
+            MysticExtendedFrame:Hide();
+            MysticExtendedFrame_Menu:Hide();
+        end
+    elseif MysticExtendedDB["ShowInCity"] and not citysList[GetRealZoneText()] and MysticExtendedDB["ButtonEnable"] then
+        MysticExtendedOptions_FloatCitySetting:SetChecked(true);
+        MysticExtended:RegisterEvent("ZONE_CHANGED_NEW_AREA", EventHandler);
+        MysticExtendedFrame:Hide();
+        MysticExtendedFrame_Menu:Hide();
+    else
+        if MysticExtendedDB["ButtonEnable"] then
+            MysticExtendedFrame:Show();
+            MysticExtendedFrame_Menu:Show();
+        else
+            MysticExtendedFrame:Hide();
+            MysticExtendedFrame_Menu:Hide();
+        end
+        MysticExtendedOptions_FloatCitySetting:SetChecked(false);
     end
     MysticExtended_DelaySlider:SetValue(MysticExtendedDB["REFORGE_RETRY_DELAY"]);
 end

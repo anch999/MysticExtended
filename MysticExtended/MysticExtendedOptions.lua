@@ -114,10 +114,18 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	hideFloat.Lable:SetJustifyH("LEFT");
 	hideFloat.Lable:SetPoint("LEFT", 30, 0);
 	hideFloat.Lable:SetText("Show/Hide Floating Button");
-	hideFloat:SetScript("OnClick", function() MysticExtended:ButtonEnable() end);
+	hideFloat:SetScript("OnClick", function() MysticExtended:ButtonEnable("Main") end);
+
+	local hideFloatCity = CreateFrame("CheckButton", "MysticExtendedOptions_FloatCitySetting", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	hideFloatCity:SetPoint("TOPLEFT", 15, -205);
+	hideFloatCity.Lable = hideFloatCity:CreateFontString(nil , "BORDER", "GameFontNormal");
+	hideFloatCity.Lable:SetJustifyH("LEFT");
+	hideFloatCity.Lable:SetPoint("LEFT", 30, 0);
+	hideFloatCity.Lable:SetText("Show Floating Button Only In Citys");
+	hideFloatCity:SetScript("OnClick", function() MysticExtended:ButtonEnable("City") end);
 
 	local enableShare = CreateFrame("CheckButton", "MysticExtendedOptions_EnableShare", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
-	enableShare:SetPoint("TOPLEFT", 15, -205);
+	enableShare:SetPoint("TOPLEFT", 15, -240);
 	enableShare.Lable = enableShare:CreateFontString(nil , "BORDER", "GameFontNormal");
 	enableShare.Lable:SetJustifyH("LEFT");
 	enableShare.Lable:SetPoint("LEFT", 30, 0);
@@ -131,7 +139,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	end);
 
 	local enableInCombat = CreateFrame("CheckButton", "MysticExtendedOptions_EnableShareCombat", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
-	enableInCombat:SetPoint("TOPLEFT", 15, -240);
+	enableInCombat:SetPoint("TOPLEFT", 15, -285);
 	enableInCombat.Lable = enableInCombat:CreateFontString(nil , "BORDER", "GameFontNormal");
 	enableInCombat.Lable:SetJustifyH("LEFT");
 	enableInCombat.Lable:SetPoint("LEFT", 30, 0);
