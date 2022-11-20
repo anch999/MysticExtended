@@ -560,6 +560,25 @@ function CloneTable(t)				-- return a copy of the table t
 	return new;
 end
 
+--[[
+MysticExtended_SlashCommand(msg):
+msg - takes the argument for the /mysticextended command so that the appropriate action can be performed
+If someone types /mysticextended, bring up the options box
+]]
+local function MysticExtended_SlashCommand(msg)
+	if msg == "options" then
+		MysticExtended:OptionsToggle();
+	else
+		if MysticExtendedFrame:IsVisible() then
+            MysticExtendedFrame:Hide();
+            MysticExtendedFrame_Menu:Hide();
+        else
+            MysticExtendedFrame:Show();
+            MysticExtendedFrame_Menu:Show();
+        end
+	end
+end
+
 function MysticExtended:OnInitialize()
     if ( MysticExtendedDB == nil ) then
         MysticExtendedDB = CloneTable(DefaultMysticExtendedDB);
@@ -580,6 +599,14 @@ function MysticExtended:OnInitialize()
             v.enableRoll = nil;
         end
     end
+
+    --Enable the use of /al or /atlasloot to open the loot browser
+	SLASH_MYSTICEXTENDED1 = "/mysticextended";
+	SLASH_MYSTICEXTENDED2 = "/me";
+	SlashCmdList["MYSTICEXTENDED"] = function(msg)
+		MysticExtended_SlashCommand(msg);
+	end
+
     if MysticExtendedDB["Version"] == nil or MysticExtendedDB["Version"] < 110 then
         MysticExtendedDB["Version"] = 110;
         local data = {};
