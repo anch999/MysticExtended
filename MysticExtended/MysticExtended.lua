@@ -100,9 +100,8 @@ local function EventHandler(event, unitID, spell)
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
     end
-    if event == "ZONE_CHANGED" then
-        print(GetMinimapZoneText())
-        if MysticExtendedDB["ShowInCity"] and MysticExtendedDB["ButtonEnable"] and citysList[GetMinimapZoneText()] then
+    if event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
+        if MysticExtendedDB["ShowInCity"] and MysticExtendedDB["ButtonEnable"] and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
             MysticExtendedFrame:Show();
             MysticExtendedFrame_Menu:Show();
         elseif MysticExtendedDB["ShowInCity"] and MysticExtendedDB["ButtonEnable"] then
@@ -258,6 +257,7 @@ function MysticExtended:ButtonEnable(button)
     else
         if MysticExtendedDB["ShowInCity"] then
             MysticExtended:UnregisterEvent("ZONE_CHANGED");
+            MysticExtended:UnregisterEvent("ZONE_CHANGED_NEW_AREA");
             MysticExtendedDB["ShowInCity"] = false
             if MysticExtendedDB["ButtonEnable"] then
                 MysticExtendedFrame:Show();
@@ -268,12 +268,14 @@ function MysticExtended:ButtonEnable(button)
             end
         else
             MysticExtendedDB["ShowInCity"] = true
-            if MysticExtendedDB["ButtonEnable"] and citysList[GetMinimapZoneText()] then
+            if MysticExtendedDB["ButtonEnable"] and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
                 MysticExtended:RegisterEvent("ZONE_CHANGED", EventHandler);
+                MysticExtended:RegisterEvent("ZONE_CHANGED_NEW_AREA", EventHandler);
                 MysticExtendedFrame:Show();
                 MysticExtendedFrame_Menu:Show();
             elseif MysticExtendedDB["ButtonEnable"] then
                 MysticExtended:RegisterEvent("ZONE_CHANGED", EventHandler);
+                MysticExtended:RegisterEvent("ZONE_CHANGED_NEW_AREA", EventHandler);
                 MysticExtendedFrame:Hide();
                 MysticExtendedFrame_Menu:Hide();
             end
@@ -646,9 +648,10 @@ function MysticExtended:OnEnable()
         MysticExtendedOptions_FloatSetting:SetChecked(false);
     end
 
-    if MysticExtendedDB["ShowInCity"] and citysList[GetMinimapZoneText()] then
+    if MysticExtendedDB["ShowInCity"] and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
         MysticExtendedOptions_FloatCitySetting:SetChecked(true);
         MysticExtended:RegisterEvent("ZONE_CHANGED", EventHandler);
+        MysticExtended:RegisterEvent("ZONE_CHANGED_NEW_AREA", EventHandler);
         if MysticExtendedDB["ButtonEnable"] then
             MysticExtendedFrame:Show();
             MysticExtendedFrame_Menu:Show();
@@ -656,9 +659,10 @@ function MysticExtended:OnEnable()
             MysticExtendedFrame:Hide();
             MysticExtendedFrame_Menu:Hide();
         end
-    elseif MysticExtendedDB["ShowInCity"] and not citysList[GetMinimapZoneText()] and MysticExtendedDB["ButtonEnable"] then
+    elseif MysticExtendedDB["ShowInCity"] and not (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) and MysticExtendedDB["ButtonEnable"] then
         MysticExtendedOptions_FloatCitySetting:SetChecked(true);
         MysticExtended:RegisterEvent("ZONE_CHANGED", EventHandler);
+        MysticExtended:RegisterEvent("ZONE_CHANGED_NEW_AREA", EventHandler);
         MysticExtendedFrame:Hide();
         MysticExtendedFrame_Menu:Hide();
     else
