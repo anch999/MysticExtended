@@ -63,7 +63,7 @@ StaticPopupDialogs["MYSTICEXTENDED_ADDLIST"] = {
     hasEditBox = true,
     OnAccept = function (self, data, data2)
         local text = self.editBox:GetText()
-        MysticExtendedDB["EnchantSaveLists"][text] = {["Name"] = text, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}; }
+        MysticExtendedDB["EnchantSaveLists"][#MysticExtendedDB["EnchantSaveLists"] + 1] = {["Name"] = text, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}; }
         UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
         UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,#MysticExtendedDB["EnchantSaveLists"]);
         MysticExtendedDB["currentSelectedList"] = #MysticExtendedDB["EnchantSaveLists"];
@@ -84,11 +84,16 @@ StaticPopupDialogs["MYSTICEXTENDED_EDITLISTNAME"] = {
     button1 = "Confirm",
     button2 = "Cancel",
     hasEditBox = true,
+    OnShow = function(self)
+		self.editBox:SetText(MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]].Name)
+		self:SetFrameStrata("TOOLTIP");
+	end,
     OnAccept = function (self, data, data2)
         local text = self.editBox:GetText()
         if text ~= "" then
             MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]].Name = text;
             UIDropDownMenu_Initialize(MysticExtended_ListDropDown, MysticExtended.MenuInitialize);
+            UIDropDownMenu_SetText(MysticExtended_ListDropDown, text)
             local update = MysticExtended_ScrollFrameUpdate();
             if update then
                 MysticExtended_ScrollFrameUpdate();

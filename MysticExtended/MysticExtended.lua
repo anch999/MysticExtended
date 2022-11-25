@@ -38,6 +38,9 @@ local citysList = {
     ["Dalaran"] = true,
 }
 
+--[[Returns listTableNum,enchTableNum
+enableDisenchantboolean,enableRollboolean,ignoreListboolean
+]]
 local function MysticExtended_DoSaveList(bagID, slotID)
     local enchantID = GetREInSlot(bagID, slotID)
         for i , v in ipairs(MysticExtendedDB["EnchantSaveLists"]) do
@@ -51,31 +54,35 @@ local function MysticExtended_DoSaveList(bagID, slotID)
         end
 end
 
-local function checkRaritys(quality)
-    for i , v in pairs(MysticExtendedDB["QualityList"]) do
-        if v[3] == quality and v[2] then
-            return true;
+--returns true if we want to keep this enchant
+local function MysticExtended_DoRarity(bagID, slotID)
+    --checks quality list
+    local function checkRaritys(quality)
+        for _, v in pairs(MysticExtendedDB["QualityList"]) do
+            if v[3] == quality and v[2] then
+                return true;
+            end
+        end
+    end
+    --get the enchantID of the slot that being rolled
+    local enchantID = GetREInSlot(bagID, slotID)
+    if MysticExtendedDB.RollByQuality then
+        for _, v in pairs(MYSTIC_ENCHANTS) do
+            if v.enchantID == enchantID and checkRaritys(v.quality) then
+                return true;
+            end
         end
     end
 end
 
-local function MysticExtended_DoRarity(bagID, slotID)
-    local enchantID = GetREInSlot(bagID, slotID)
-        if MysticExtendedDB.RollByQuality then
-            for i , v in pairs(MYSTIC_ENCHANTS) do
-                if v.enchantID == enchantID and checkRaritys(v.quality) then
-                    return true;
-                end
-            end
-        end
-end
-
 local AutoOn = false;
 
+--timer to try to roll an enchant every 3 seconds if no altar up
 function MysticExtended:Repeat()
     MysticExtended_RollEnchant();
 end
 
+--stops rolling and re registers ascensions ui 
 local function MysticExtended_StopAutoRoll()
     MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
     MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
@@ -89,17 +96,24 @@ local function MysticExtended_StopAutoRoll()
     AutoOn = false;
 end
 
+--[[
+Event Handlers
+]]
 local function EventHandler(event, unitID, spell)
     if unitID == "player" and spell == "Enchanting" then
+        --stops all rolling when enchanting is interrupted
         if event == "UNIT_SPELLCAST_INTERRUPTED" then
             MysticExtended_StopAutoRoll();
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+            --stops the 3second timer
             MysticExtended:CancelTimer(MysticExtended.rollTimer);
+            --starts short timer to start next roll item
             MysticExtended:ScheduleTimer(MysticExtended_RollEnchant, tonumber(MysticExtendedDB["REFORGE_RETRY_DELAY"] / 10));
         end
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
     end
+    --auto show/hide in city's
     if event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
         if MysticExtendedDB["ShowInCity"] and MysticExtendedDB["ButtonEnable"] and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
             MysticExtendedFrame:Show();
@@ -111,6 +125,7 @@ local function EventHandler(event, unitID, spell)
     end
 end
 
+--checks bag slot to see if it has an item on the reroll items list
 local function MysticExtended_GetItemID(bagID, slotID)
     if bagID and slotID then
         local item = GetContainerItemID(bagID, slotID);
@@ -122,13 +137,16 @@ local function MysticExtended_GetItemID(bagID, slotID)
     end
 end
 
+--removes item from a list if you know it allready or just disenchanted it
 local function MysticExtended_RemoveFound(bagID, slotID)
     local listName,enchNum = MysticExtended_DoSaveList(bagID,slotID)
     table.remove(MysticExtendedDB["EnchantSaveLists"][listName],enchNum)
 end
 
 local function DisenchantItem(bagID,slotID)
+    --checks to see if you have any mystic extracts
     if GetItemCount(98463) and (GetItemCount(98463) > 0) then
+        --checks to see if you know the enchant if not extract and remove from list
         if IsReforgeEnchantmentKnown(GetREInSlot(bagID,slotID)) then
             DEFAULT_CHAT_FRAME:AddMessage("You already know this enchant removed from list");
             MysticExtended_RemoveFound(bagID,slotID);
@@ -143,25 +161,32 @@ local function DisenchantItem(bagID,slotID)
     end
 end
 
+--finds the next bag slot with an item to roll on
 local function MysticExtended_FindNextItem()
     local bagID, slotID = 0, 0;
     for b = bagID, 4 do
         for s = slotID + 1, GetContainerNumSlots(b) do
             if MysticExtended_GetItemID(b,s) then
-                local listName,enchNum,enableDisenchant,enableRoll,ignoreList = MysticExtended_DoSaveList(b,s)
+                local enableDisenchant,enableRoll,ignoreList = select(3,MysticExtended_DoSaveList(b,s))
                     if RollExtracts then
+                        --if roll for extracts is on no checks just keep rolling
                         return b, s;
                     elseif enableRoll and ignoreList ~= true then
+                        --checks all item list to first see if there on and not a ignore/reroll list
                         if enableDisenchant then
+                            --check if we want to disenchant this or just go to the next item
                             DisenchantItem(b,s);
+                            --updates scroll frame after removing an item from a list
                             local update = MysticExtended_ScrollFrameUpdate();
                             if update then
                                 MysticExtended_ScrollFrameUpdate();
                             end
                         end
                     elseif  enableRoll and ignoreList then
+                        --returns bagslot if its and ignore/reroll list
                         return b, s;
                     elseif MysticExtended_DoRarity(b,s) then
+                        --Next item if we want to keep this rarity
                     else
                         return b, s;
                     end
@@ -172,24 +197,36 @@ local function MysticExtended_FindNextItem()
     end
 end
 
+--[[
+roll the enchant or skip this item
+]]
 function MysticExtended_RollEnchant()
+    --find item to roll on
     local bagID, slotID = MysticExtended_FindNextItem();
+        --show run count down
         MysticExtendedCountDownFrame:Show();
         MysticExtendedCountDownText:SetText("You Have "..GetItemCount(98462).." Runes Left");
+        -- check if rolling hasnt been stoped or we have enough runes
     if AutoOn and GetItemCount(98462) > 0 and MysticExtended_GetItemID(bagID, slotID) and GetUnitSpeed("player") == 0 then
         MysticExtended:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", EventHandler);
         MysticExtended:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", EventHandler);
+        --starts 3sec repeat timer for when there is no atlar
         MysticExtended.rollTimer = MysticExtended:ScheduleTimer("Repeat", 3);
-        local listName,enchNum,enableDisenchant,enableRoll,ignoreList = MysticExtended_DoSaveList(bagID,slotID)
+        local enableRoll,ignoreList = select(4,MysticExtended_DoSaveList(bagID,slotID));
+        --check if we are just rolling for extracts
         if RollExtracts then
             RequestSlotReforgeEnchantment(bagID, slotID);
+        --keep enchant if found
         elseif enableRoll and ignoreList ~= true then
+        --reforge if its on an ignorelist
         elseif enableRoll and ignoreList then
             RequestSlotReforgeEnchantment(bagID, slotID);
+        --reforge if its a rarity we dont want
         elseif MysticExtended_DoRarity(bagID,slotID) then else
             RequestSlotReforgeEnchantment(bagID, slotID);
         end
     else
+        --stop if where out of items or runes
         if GetItemCount(98462) <= 0 then
             DEFAULT_CHAT_FRAME:AddMessage("Out Runes")
         elseif GetUnitSpeed("player") == 0 then
@@ -199,6 +236,7 @@ function MysticExtended_RollEnchant()
     end
 end
 
+--start rolling make all text changes 
 local function MysticExtended_StartAutoRoll()
     if AutoOn then
         MysticExtended_StopAutoRoll();
