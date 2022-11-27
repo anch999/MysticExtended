@@ -178,7 +178,13 @@ end
 local listDropdown = CreateFrame("Button", "MysticExtended_ListDropDown", MysticExtendedListFrame, "UIDropDownMenuTemplate");
     listDropdown:SetPoint("TOPLEFT", 4, -40);
     listDropdown:SetScript("OnClick", MysticExtended_ListOnClick);
-    UIDropDownMenu_SetWidth(MysticExtended_ListDropDown,155)
+    UIDropDownMenu_SetWidth(MysticExtended_ListDropDown, 155)
+    listDropdown.EnchantNumber = listDropdown:CreateFontString("MysticExtendedEnchantCount", "OVERLAY", "GameFontNormal");
+    listDropdown.EnchantNumber:SetPoint("TOPLEFT", 26, -8);
+    listDropdown.EnchantNumber:SetFont("Fonts\\FRIZQT__.TTF", 11)
+    listDropdown:SetScript("OnUpdate", function()
+            listDropdown.EnchantNumber:SetText("|cff00ff00"..#MysticExtendedDB["EnchantSaveLists"][MysticExtendedDB["currentSelectedList"]]);
+        end)
 
 local editlistnamebtn = CreateFrame("Button", "MysticExtended_EditListBtn", MysticExtendedListFrame, "OptionsButtonTemplate");
     editlistnamebtn:SetPoint("TOPLEFT", 195, -41);

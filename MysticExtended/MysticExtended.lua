@@ -157,7 +157,7 @@ local function DisenchantItem(bagID,slotID)
             DEFAULT_CHAT_FRAME:AddMessage(itemLink.." Has been added to your collection and removed from the list");
         end
     else
-        DEFAULT_CHAT_FRAME:AddMessage("You don't have enough Mystic Extract to disenchant that item")
+        DEFAULT_CHAT_FRAME:AddMessage("You don't have enough Mystic Extract's to disenchant that item")
     end
 end
 
@@ -173,7 +173,7 @@ local function MysticExtended_FindNextItem()
                         return b, s;
                     elseif enableRoll and ignoreList ~= true then
                         --checks all item list to first see if there on and not a ignore/reroll list
-                        if enableDisenchant then
+                        if enableDisenchant and GetItemCount(98463) and (GetItemCount(98463) > 0) then
                             --check if we want to disenchant this or just go to the next item
                             DisenchantItem(b,s);
                             --updates scroll frame after removing an item from a list
@@ -183,7 +183,7 @@ local function MysticExtended_FindNextItem()
                             end
                         end
                     elseif  enableRoll and ignoreList then
-                        --returns bagslot if its and ignore/reroll list
+                        --returns bagslot if its on the ignore/reroll list
                         return b, s;
                     elseif MysticExtended_DoRarity(b,s) then
                         --Next item if we want to keep this rarity
