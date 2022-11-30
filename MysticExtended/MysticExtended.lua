@@ -86,6 +86,7 @@ end
 local function MysticExtended_StopAutoRoll()
     MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
     MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
+    MysticExtended:UnregisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
     MysticEnchantingFrame:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
     MysticExtended:CancelTimer(MysticExtended.rollTimer);
     MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
@@ -96,11 +97,23 @@ local function MysticExtended_StopAutoRoll()
     AutoOn = false;
 end
 
+local function GetRequiredRollsForLevel(level)
+    if level == 0 then
+        return 1
+    end
+
+    if level >= 250 and not C_Realm:IsRealmMask(Enum.RealmMask.Area52) then
+        return 557250 + (level - 250) * 4097
+    end
+
+    return floor(354 * level + 7.5 * level * level)
+end
+
 --[[
 Event Handlers
 ]]
-local function EventHandler(event, unitID, spell)
-    if unitID == "player" and spell == "Enchanting" then
+local function EventHandler(event, arg1, arg2, arg3)
+    if arg1 == "player" and arg2 == "Enchanting" then
         --stops all rolling when enchanting is interrupted
         if event == "UNIT_SPELLCAST_INTERRUPTED" then
             MysticExtended_StopAutoRoll();
@@ -112,9 +125,15 @@ local function EventHandler(event, unitID, spell)
         end
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_INTERRUPTED");
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
-    end
-    --auto show/hide in city's
-    if event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
+    elseif event == "COMMENTATOR_SKIRMISH_QUEUE_REQUEST" and arg1 == "ASCENSION_REFORGE_PROGRESS_UPDATE" then
+        --Shows how many more enchants to level up your atlar
+        if not MysticExtendedDB["lastXpLevel"] then MysticExtendedDB["lastXpLevel"] = 0 end
+        local xpGained = arg2 - MysticExtendedDB["lastXpLevel"];
+        local nextLevel = (GetRequiredRollsForLevel(arg3) - arg2) / xpGained;
+        MysticExtendedNextLevelText:SetText("Next Altar Level in "..math.floor(nextLevel).." Enchants");
+        MysticExtendedDB["lastXpLevel"] = arg2;
+    elseif event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
+        --auto show/hide in city's
         if MysticExtendedDB["ShowInCity"] and MysticExtendedDB["ButtonEnable"] and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
             MysticExtendedFrame:Show();
             MysticExtendedFrame_Menu:Show();
@@ -204,12 +223,14 @@ function MysticExtended_RollEnchant()
     --find item to roll on
     local bagID, slotID = MysticExtended_FindNextItem();
         --show run count down
+        MysticExtendedNextLevelText:Show();
         MysticExtendedCountDownFrame:Show();
         MysticExtendedCountDownText:SetText("You Have "..GetItemCount(98462).." Runes Left");
         -- check if rolling hasnt been stoped or we have enough runes
     if AutoOn and GetItemCount(98462) > 0 and MysticExtended_GetItemID(bagID, slotID) and GetUnitSpeed("player") == 0 then
         MysticExtended:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", EventHandler);
         MysticExtended:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", EventHandler);
+        MysticExtended:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST", EventHandler);
         --starts 3sec repeat timer for when there is no atlar
         MysticExtended.rollTimer = MysticExtended:ScheduleTimer("Repeat", 3);
         local enableRoll,ignoreList = select(4,MysticExtended_DoSaveList(bagID,slotID));
@@ -502,6 +523,9 @@ local countDownFrame = CreateFrame("FRAME", "MysticExtendedCountDownFrame", UIPa
     countDownFrame.cText = countDownFrame:CreateFontString("MysticExtendedCountDownText","OVERLAY","GameFontNormal");
     countDownFrame.cText:Show();
     countDownFrame.cText:SetPoint("CENTER",0,0);
+    countDownFrame.nextlvlText = countDownFrame:CreateFontString("MysticExtendedNextLevelText","OVERLAY","GameFontNormal");
+    countDownFrame.nextlvlText:Show();
+    countDownFrame.nextlvlText:SetPoint("CENTER",0,-20);
     countDownFrame.rollingText = countDownFrame:CreateFontString("MysticExtendedRollingText","OVERLAY","GameFontNormal");
     countDownFrame.rollingText:Show();
     countDownFrame.rollingText:SetPoint("CENTER",0,20);
