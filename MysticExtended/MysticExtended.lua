@@ -6,7 +6,7 @@ local realmName = GetRealmName();
 local RollExtracts = false;
 local DefaultMysticExtendedDB  = {
 ["EnchantSaveLists"] = {[1] = {["Name"] = "Enchant List 1", [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}}},
-["ReRollItems"] = {18863, 18853,992720},
+["ReRollItems"] = {18863, 18853,992720,6992720},
 ["ListFrameLastState"] = false,
 ["currentSelectedList"] = 1,
 ["RollByQuality"] = true,
@@ -38,10 +38,8 @@ local citysList = {
     ["Dalaran"] = true,
 }
 
---[[Returns listTableNum,enchTableNum
-enableDisenchantboolean,enableRollboolean,ignoreListboolean
-]]
-local function MysticExtended_DoSaveList(bagID, slotID)
+--Returns listTableNum, enchTableNum, enableDisenchantboolean, enableRollboolean, ignoreListboolean
+function MysticExtended:DoSaveList(bagID, slotID)
     local enchantID = GetREInSlot(bagID, slotID)
         for i , v in ipairs(MysticExtendedDB["EnchantSaveLists"]) do
             if v[realmName]["enableRoll"] then
@@ -55,7 +53,7 @@ local function MysticExtended_DoSaveList(bagID, slotID)
 end
 
 --returns true if we want to keep this enchant
-local function MysticExtended_DoRarity(bagID, slotID)
+function MysticExtended:DoRarity(bagID, slotID)
     --checks quality list
     local function checkRaritys(quality)
         for _, v in pairs(MysticExtendedDB["QualityList"]) do
@@ -127,11 +125,12 @@ local function EventHandler(event, arg1, arg2, arg3)
         MysticExtended:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED");
     elseif event == "COMMENTATOR_SKIRMISH_QUEUE_REQUEST" and arg1 == "ASCENSION_REFORGE_PROGRESS_UPDATE" then
         --Shows how many more enchants to level up your atlar
-        if not MysticExtendedDB["lastXpLevel"] then MysticExtendedDB["lastXpLevel"] = 0 end
-        local xpGained = arg2 - MysticExtendedDB["lastXpLevel"];
+        if not MysticExtendedDB["lastXpLevel"] then MysticExtendedDB["lastXpLevel"] = {} end
+        if not MysticExtendedDB["lastXpLevel"][realmName] then MysticExtendedDB["lastXpLevel"][realmName] = 0 end
+        local xpGained = arg2 - MysticExtendedDB["lastXpLevel"][realmName];
         local nextLevel = (GetRequiredRollsForLevel(arg3) - arg2) / xpGained;
-        MysticExtendedNextLevelText:SetText("Next Altar Level in "..math.floor(nextLevel).." Enchants");
-        MysticExtendedDB["lastXpLevel"] = arg2;
+        MysticExtendedNextLevelText:SetText("Next Altar Level in "..(math.floor(nextLevel) + 1).." Enchants");
+        MysticExtendedDB["lastXpLevel"][realmName] = arg2;
     elseif event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
         --auto show/hide in city's
         if MysticExtendedDB["ShowInCity"] and MysticExtendedDB["ButtonEnable"] and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
@@ -145,20 +144,20 @@ local function EventHandler(event, arg1, arg2, arg3)
 end
 
 --checks bag slot to see if it has an item on the reroll items list
-local function MysticExtended_GetItemID(bagID, slotID)
-    if bagID and slotID then
-        local item = GetContainerItemID(bagID, slotID);
-            for i , v in pairs(MysticExtendedDB["ReRollItems"]) do
-                if v == item then
-                    return true;
-                end
-            end
+function MysticExtended:GetItemID(bagID, slotID, item)
+    if not item and bagID and slotID then
+        item = GetContainerItemID(bagID, slotID);
+    end
+    for i , v in pairs(MysticExtendedDB["ReRollItems"]) do
+        if v == item then
+            return true;
+        end
     end
 end
 
 --removes item from a list if you know it allready or just disenchanted it
 local function MysticExtended_RemoveFound(bagID, slotID)
-    local listName,enchNum = MysticExtended_DoSaveList(bagID,slotID)
+    local listName,enchNum = MysticExtended:DoSaveList(bagID,slotID)
     table.remove(MysticExtendedDB["EnchantSaveLists"][listName],enchNum)
 end
 
@@ -182,11 +181,10 @@ end
 
 --finds the next bag slot with an item to roll on
 local function MysticExtended_FindNextItem()
-    local bagID, slotID = 0, 0;
-    for b = bagID, 4 do
-        for s = slotID + 1, GetContainerNumSlots(b) do
-            if MysticExtended_GetItemID(b,s) then
-                local enableDisenchant,enableRoll,ignoreList = select(3,MysticExtended_DoSaveList(b,s))
+    for b = 0, 4 do
+        for s = 1, GetContainerNumSlots(b) do
+            if MysticExtended:GetItemID(b,s) then
+                local enableDisenchant,enableRoll,ignoreList = select(3,MysticExtended:DoSaveList(b,s))
                     if RollExtracts then
                         --if roll for extracts is on no checks just keep rolling
                         return b, s;
@@ -204,15 +202,13 @@ local function MysticExtended_FindNextItem()
                     elseif  enableRoll and ignoreList then
                         --returns bagslot if its on the ignore/reroll list
                         return b, s;
-                    elseif MysticExtended_DoRarity(b,s) then
+                    elseif MysticExtended:DoRarity(b,s) then
                         --Next item if we want to keep this rarity
                     else
                         return b, s;
                     end
             end
-        slotID = s;
         end
-    slotID = 0;
     end
 end
 
@@ -227,13 +223,13 @@ function MysticExtended_RollEnchant()
         MysticExtendedCountDownFrame:Show();
         MysticExtendedCountDownText:SetText("You Have "..GetItemCount(98462).." Runes Left");
         -- check if rolling hasnt been stoped or we have enough runes
-    if AutoOn and GetItemCount(98462) > 0 and MysticExtended_GetItemID(bagID, slotID) and GetUnitSpeed("player") == 0 then
+    if AutoOn and GetItemCount(98462) > 0 and MysticExtended:GetItemID(bagID, slotID) and GetUnitSpeed("player") == 0 then
         MysticExtended:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", EventHandler);
         MysticExtended:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", EventHandler);
         MysticExtended:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST", EventHandler);
         --starts 3sec repeat timer for when there is no atlar
         MysticExtended.rollTimer = MysticExtended:ScheduleTimer("Repeat", 3);
-        local enableRoll,ignoreList = select(4,MysticExtended_DoSaveList(bagID,slotID));
+        local enableRoll,ignoreList = select(4,MysticExtended:DoSaveList(bagID,slotID));
         --check if we are just rolling for extracts
         if RollExtracts then
             RequestSlotReforgeEnchantment(bagID, slotID);
@@ -243,7 +239,7 @@ function MysticExtended_RollEnchant()
         elseif enableRoll and ignoreList then
             RequestSlotReforgeEnchantment(bagID, slotID);
         --reforge if its a rarity we dont want
-        elseif MysticExtended_DoRarity(bagID,slotID) then else
+        elseif MysticExtended:DoRarity(bagID,slotID) then else
             RequestSlotReforgeEnchantment(bagID, slotID);
         end
     else
@@ -480,18 +476,18 @@ function MysticExtended:RollMenuRegister(self)
 	)
 end
 
-function MysticExtended_OnClick(self,arg1)
+function MysticExtended_OnClick(self, arg1)
     if MysticExtended_DewdropMenu:IsOpen() then
         MysticExtended_DewdropMenu:Close();
     else
-        if (arg1=="LeftButton") then
+        if (arg1 == "LeftButton") then
             MysticExtended_StartAutoRoll();
-        elseif (arg1=="RightButton") then
+        elseif (arg1 == "RightButton") then
             if IsAltKeyDown() then
                 MysticEnchantingFrame:Display();
             else
-            MysticExtended:RollMenuRegister(self);
-            MysticExtended_DewdropMenu:Open(this);
+                MysticExtended:RollMenuRegister(self);
+                MysticExtended_DewdropMenu:Open(this);
             end
         end
     end
@@ -612,46 +608,45 @@ local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticEx
         MysticExtended_Secure:Hide();
     end);
 
-function CloneTable(t)				-- return a copy of the table t
-	local new = {};					-- create a new table
-	local i, v = next(t, nil);		-- i is an index of t, v = t[i]
-	while i do
-		if type(v)=="table" then 
-			v=CloneTable(v);
-		end 
-		new[i] = v;
-		i, v = next(t, i);			-- get next index
-	end
-	return new;
+function CloneTable(t) -- return a copy of the table t
+    local new = {}; -- create a new table
+    local i, v = next(t, nil); -- i is an index of t, v = t[i]
+    while i do
+        if type(v) == "table" then
+            v = CloneTable(v);
+        end
+        new[i] = v;
+        i, v = next(t, i); -- get next index
+    end
+    return new;
 end
-
 --[[
 MysticExtended_SlashCommand(msg):
 msg - takes the argument for the /mysticextended command so that the appropriate action can be performed
 If someone types /mysticextended, bring up the options box
 ]]
 local function MysticExtended_SlashCommand(msg)
-	if msg == "options" then
-		MysticExtended:OptionsToggle();
-	else
-		if MysticExtendedFrame:IsVisible() then
+    if msg == "options" then
+        MysticExtended:OptionsToggle();
+    else
+        if MysticExtendedFrame:IsVisible() then
             MysticExtendedFrame:Hide();
             MysticExtendedFrame_Menu:Hide();
         else
             MysticExtendedFrame:Show();
             MysticExtendedFrame_Menu:Show();
         end
-	end
+    end
 end
 
 function MysticExtended:OnInitialize()
-    if ( MysticExtendedDB == nil ) then
+    if (MysticExtendedDB == nil) then
         MysticExtendedDB = CloneTable(DefaultMysticExtendedDB);
     end
     realmName = GetRealmName();
-    for _,v in ipairs(MysticExtendedDB["EnchantSaveLists"]) do
+    for _, v in ipairs(MysticExtendedDB["EnchantSaveLists"]) do
         if v[realmName] == nil then
-            v[realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};
+            v[realmName] = { ["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false };
         end
         --clean up for old settings
         if type(v.enableDisenchant) == "boolean" then
@@ -666,20 +661,20 @@ function MysticExtended:OnInitialize()
     end
 
     --Enable the use of /al or /atlasloot to open the loot browser
-	SLASH_MYSTICEXTENDED1 = "/mysticextended";
-	SLASH_MYSTICEXTENDED2 = "/me";
-	SlashCmdList["MYSTICEXTENDED"] = function(msg)
-		MysticExtended_SlashCommand(msg);
-	end
+    SLASH_MYSTICEXTENDED1 = "/mysticextended";
+    SLASH_MYSTICEXTENDED2 = "/me";
+    SlashCmdList["MYSTICEXTENDED"] = function(msg)
+        MysticExtended_SlashCommand(msg);
+    end
 
     if MysticExtendedDB["Version"] == nil or MysticExtendedDB["Version"] < 110 then
         MysticExtendedDB["Version"] = 110;
         local data = {};
-        for _,v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
+        for _, v in pairs(MysticExtendedDB["EnchantSaveLists"]) do
             tinsert(data, v);
         end
         MysticExtendedDB["EnchantSaveLists"] = {};
-        for _,v in ipairs(data) do
+        for _, v in ipairs(data) do
             tinsert(MysticExtendedDB["EnchantSaveLists"], v);
         end
         MysticExtendedDB["currentSelectedList"] = 1;
@@ -687,6 +682,60 @@ function MysticExtended:OnInitialize()
     MysticExtended:RegisterComm("MysticExtendedEnchantList")
 end
 
+--adds a move to and from buttons to realm/personal/guild bank for auto moving mystic enchanted trinkets 
+local function guildBankFrameOpened()
+    local moveReItemsTobank = CreateFrame("Button", "MysticExtended_BankTo", GuildBankFrame, "OptionsButtonTemplate");
+    moveReItemsTobank:SetSize(135, 26);
+    moveReItemsTobank:SetPoint("TOP", GuildBankFrame, "TOP", -225, -39);
+    moveReItemsTobank:SetText("Move To Bank");
+    moveReItemsTobank:SetScript("OnClick", function()
+        for b = 0, 4 do
+            for s = 1, GetContainerNumSlots(b) do
+                if MysticExtended:GetItemID(b, s) then
+                    local enableDisenchant, enableRoll, ignoreList = select(3, MysticExtended:DoSaveList(b, s))
+                    if enableRoll and ignoreList ~= true then
+                        UseContainerItem(b, s)
+                    elseif enableRoll and ignoreList then
+                    elseif MysticExtended:DoRarity(b, s) then
+                        UseContainerItem(b, s)
+                    end
+                end
+            end
+        end
+    end)
+
+    local moveReItemsFrombank = CreateFrame("Button", "MysticExtended_BankFrom", GuildBankFrame, "OptionsButtonTemplate");
+    moveReItemsFrombank:SetSize(135, 26);
+    moveReItemsFrombank:SetPoint("TOP", GuildBankFrame, "TOP", 225, -39);
+    moveReItemsFrombank:SetText("Move To Inventory");
+    moveReItemsFrombank:SetScript("OnClick", function()
+        for c = 1, 112 do
+            if GetGuildBankItemLink(GetCurrentGuildBankTab(), c) then
+                local id = tonumber(select(3, strfind(GetGuildBankItemLink(GetCurrentGuildBankTab(), c), "^|%x+|Hitem:(%-?%d+).*")))
+                if MysticExtended:GetItemID(nil, nil, id) then
+                    AutoStoreGuildBankItem(GetCurrentGuildBankTab(), c)
+                end
+            end
+        end
+    end)
+    MysticExtended:UnregisterEvent("GUILDBANKFRAME_OPENED");
+end
+
+--auto converts trinkets to there bloody version
+function MysticExtended:BloodyJarOpen()
+    if GossipFrameNpcNameText:GetText() == "Bloody Jar" and MysticExtendedDB["AutoMysticScrollBloodforge"] then
+        for i = 1, GetNumGossipOptions() - 1 do
+            local b = _G["GossipTitleButton" .. i]
+            if b and b:GetText() and b:GetText():match("Untarnished Mystic Scroll") then
+                b:Click()
+                _G["StaticPopup1Button1"]:Click()
+                return
+            end
+        end
+    end
+end
+
+--Loads when addon is loaded
 function MysticExtended:OnEnable()
     MysticExtended_ListEnable();
     MysticExtended_DropDownInitialize();
@@ -708,6 +757,13 @@ function MysticExtended:OnEnable()
         MysticExtendedOptions_FloatSetting:SetChecked(true);
     else
         MysticExtendedOptions_FloatSetting:SetChecked(false);
+    end
+
+    if MysticExtendedDB["AutoMysticScrollBloodforge"] then
+        MysticExtendedOptions_AutoMysticScrollBloodforge:SetChecked(true);
+        MysticExtended:RegisterEvent("GOSSIP_SHOW", MysticExtended.BloodyJarOpen);
+    else
+        MysticExtendedOptions_AutoMysticScrollBloodforge:SetChecked(false);
     end
 
     if MysticExtendedDB["ShowInCity"] and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
@@ -738,4 +794,5 @@ function MysticExtended:OnEnable()
         MysticExtendedOptions_FloatCitySetting:SetChecked(false);
     end
     MysticExtended_DelaySlider:SetValue(MysticExtendedDB["REFORGE_RETRY_DELAY"]);
+    MysticExtended:RegisterEvent("GUILDBANKFRAME_OPENED", guildBankFrameOpened)
 end

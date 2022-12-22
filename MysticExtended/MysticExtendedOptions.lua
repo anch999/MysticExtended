@@ -139,7 +139,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	end);
 
 	local enableInCombat = CreateFrame("CheckButton", "MysticExtendedOptions_EnableShareCombat", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
-	enableInCombat:SetPoint("TOPLEFT", 15, -285);
+	enableInCombat:SetPoint("TOPLEFT", 15, -275);
 	enableInCombat.Lable = enableInCombat:CreateFontString(nil , "BORDER", "GameFontNormal");
 	enableInCombat.Lable:SetJustifyH("LEFT");
 	enableInCombat.Lable:SetPoint("LEFT", 30, 0);
@@ -149,5 +149,21 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 			MysticExtendedDB["AllowShareEnchantListInCombat"] = false
 		else
 			MysticExtendedDB["AllowShareEnchantListInCombat"] = true
+		end
+	end);
+
+	local trinketConvert = CreateFrame("CheckButton", "MysticExtendedOptions_AutoMysticScrollBloodforge", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	trinketConvert:SetPoint("TOPLEFT", 15, -310);
+	trinketConvert.Lable = trinketConvert:CreateFontString(nil , "BORDER", "GameFontNormal");
+	trinketConvert.Lable:SetJustifyH("LEFT");
+	trinketConvert.Lable:SetPoint("LEFT", 30, 0);
+	trinketConvert.Lable:SetText("Auto Bloodforge Untarnished Mystic Scrolls when Bloody Jar is used");
+	trinketConvert:SetScript("OnClick", function()
+		if MysticExtendedDB["AutoMysticScrollBloodforge"] then
+			MysticExtendedDB["AutoMysticScrollBloodforge"] = false
+			MysticExtended:UnregisterEvent("GOSSIP_SHOW");
+		else
+			MysticExtendedDB["AutoMysticScrollBloodforge"] = true
+			MysticExtended:RegisterEvent("GOSSIP_SHOW", MysticExtended.BloodyJarOpen);
 		end
 	end);
