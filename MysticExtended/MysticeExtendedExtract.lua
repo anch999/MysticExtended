@@ -69,6 +69,7 @@ function MysticExtended:SearchBags()
         end
     end
     MysticExtended_InventroyScrollFrameUpdate()
+    MysticExtendedExtractCountText:SetText(string.format("Mystic Extracts: |cffFFFFFF%i|r", GetItemCount(98463)));
 end
 
 --Shows a menu with options and sharing options
