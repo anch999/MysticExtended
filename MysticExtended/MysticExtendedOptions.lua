@@ -152,7 +152,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 		end
 	end);
 
-	local trinketConvert = CreateFrame("CheckButton", "MysticExtendedOptions_AutoMysticScrollBloodforge", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+--[[ local trinketConvert = CreateFrame("CheckButton", "MysticExtendedOptions_AutoMysticScrollBloodforge", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
 	trinketConvert:SetPoint("TOPLEFT", 15, -310);
 	trinketConvert.Lable = trinketConvert:CreateFontString(nil , "BORDER", "GameFontNormal");
 	trinketConvert.Lable:SetJustifyH("LEFT");
@@ -166,4 +166,42 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 			MysticExtendedDB["AutoMysticScrollBloodforge"] = true
 			MysticExtended:RegisterEvent("GOSSIP_SHOW", MysticExtended.BloodyJarOpen);
 		end
+	end); ]]
+
+local chatmsg = CreateFrame("CheckButton", "MysticExtendedOptions_ChatMSG", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	chatmsg:SetPoint("TOPLEFT", 15, -310);
+	chatmsg.Lable = chatmsg:CreateFontString(nil , "BORDER", "GameFontNormal");
+	chatmsg.Lable:SetJustifyH("LEFT");
+	chatmsg.Lable:SetPoint("LEFT", 30, 0);
+	chatmsg.Lable:SetText("Show Enchant Learned Messages");
+	chatmsg:SetScript("OnClick", function()
+		if MysticExtendedDB["ChatMSG"] then
+			MysticExtendedDB["ChatMSG"] = false
+		else
+			MysticExtendedDB["ChatMSG"] = true
+		end
+	end);
+
+local extractwarn = CreateFrame("CheckButton", "MysticExtendedOptions_ExtractWarning", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	extractwarn:SetPoint("TOPLEFT", 15, -345);
+	extractwarn.Lable = extractwarn:CreateFontString(nil , "BORDER", "GameFontNormal");
+	extractwarn.Lable:SetJustifyH("LEFT");
+	extractwarn.Lable:SetPoint("LEFT", 30, 0);
+	extractwarn.Lable:SetText("Turn Off Extract Warning On Extract Interface");
+	extractwarn:SetScript("OnClick", function()
+		if MysticExtendedDB["ExtractWarn"] then
+			MysticExtendedDB["ExtractWarn"] = false
+		else
+			MysticExtendedDB["ExtractWarn"] = true
+		end
+	end);
+
+local mapicon = CreateFrame("CheckButton", "MysticExtendedOptions_MapIcon", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	mapicon:SetPoint("TOPLEFT", 15, -380);
+	mapicon.Lable = mapicon:CreateFontString(nil , "BORDER", "GameFontNormal");
+	mapicon.Lable:SetJustifyH("LEFT");
+	mapicon.Lable:SetPoint("LEFT", 30, 0);
+	mapicon.Lable:SetText("Show/Hide Minimap Button");
+	mapicon:SetScript("OnClick", function()
+		MysticExtended:ToggleMinimap();
 	end);
