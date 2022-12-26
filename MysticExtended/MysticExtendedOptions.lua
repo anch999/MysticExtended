@@ -187,7 +187,7 @@ local extractwarn = CreateFrame("CheckButton", "MysticExtendedOptions_ExtractWar
 	extractwarn.Lable = extractwarn:CreateFontString(nil , "BORDER", "GameFontNormal");
 	extractwarn.Lable:SetJustifyH("LEFT");
 	extractwarn.Lable:SetPoint("LEFT", 30, 0);
-	extractwarn.Lable:SetText("Turn Off Extract Warning On Extract Interface");
+	extractwarn.Lable:SetText("Toggle Extract Warning On Extract Interface");
 	extractwarn:SetScript("OnClick", function()
 		if MysticExtendedDB["ExtractWarn"] then
 			MysticExtendedDB["ExtractWarn"] = false
