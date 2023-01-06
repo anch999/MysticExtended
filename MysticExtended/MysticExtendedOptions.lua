@@ -1,11 +1,12 @@
-
-function MysticExtended:OptionsToggle()
+local ME = LibStub("AceAddon-3.0"):GetAddon("MysticExtended")
+function ME:OptionsToggle()
     if InterfaceOptionsFrame:IsVisible() then
 		InterfaceOptionsFrame:Hide();
 	else
 		MysticExtended_OptionsMenu:Close();
 		Collections:Hide();
 		InterfaceOptionsFrame_OpenToCategory("MysticExtended");
+		MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,MysticExtendedDB.MinGold)
 	end
 end
 
@@ -16,9 +17,9 @@ end
 
 local function MysticExtendedOptions_Menu_Initialize()
     local info;
-	for k,v in pairs(MysticExtendedDB["ReRollItems"]) do
+	for k,v in pairs(ME.db.ReRollItems) do
 				info = {
-					text = GetItemInfo(MysticExtendedDB["ReRollItems"][k]);
+					text = GetItemInfo(ME.db.ReRollItems[k]);
 					func = MysticExtendedOptions_Menu_OnClick;
 				};
 					UIDropDownMenu_AddButton(info);
@@ -34,7 +35,7 @@ end
 
 local function AddIdButton()
 	local function checkID(text)
-		for i,v in pairs(MysticExtendedDB["ReRollItems"]) do
+		for i,v in pairs(ME.db.ReRollItems) do
 			if v == text then
 				return true;
 			end
@@ -42,16 +43,16 @@ local function AddIdButton()
 	end
 	local text = tonumber(MysticExtendedOptions_AddIDeditbox:GetText());
 	if not checkID(text) and GetItemInfo(text) then
-		tinsert(MysticExtendedDB["ReRollItems"],text)
+		tinsert(ME.db.ReRollItems,text)
 	end
 end
 
 local function DeleteIdButton()
 	local id = UIDropDownMenu_GetSelectedID(MysticExtendedOptions_Menu);
-	table.remove(MysticExtendedDB["ReRollItems"],id)
+	table.remove(ME.db.ReRollItems,id)
 	MysticExtendedOptions_Menu_Initialize();
 	UIDropDownMenu_SetSelectedID(MysticExtendedOptions_Menu,1);
-	UIDropDownMenu_SetText(MysticExtendedOptions_Menu,GetItemInfo(MysticExtendedDB["ReRollItems"][1]));
+	UIDropDownMenu_SetText(MysticExtendedOptions_Menu,GetItemInfo(ME.db.ReRollItems[1]));
 end
 
 --Creates the options frame and all its assets
@@ -104,7 +105,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	getglobal(delaySlider:GetName() .. 'Low'):SetText('.1'); --Sets the left-side slider text (default is "Low").
 	getglobal(delaySlider:GetName() .. 'High'):SetText('.10'); --Sets the right-side slider text (default is "High").
 	delaySlider:SetScript("OnValueChanged", function()
-		MysticExtendedDB["REFORGE_RETRY_DELAY"] = delaySlider:GetValue();
+		ME.db["REFORGE_RETRY_DELAY"] = delaySlider:GetValue();
 		getglobal(delaySlider:GetName() .. 'Text'):SetText(tonumber("."..delaySlider:GetValue()));
 	end);
 
@@ -114,7 +115,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	hideFloat.Lable:SetJustifyH("LEFT");
 	hideFloat.Lable:SetPoint("LEFT", 30, 0);
 	hideFloat.Lable:SetText("Show/Hide Floating Button");
-	hideFloat:SetScript("OnClick", function() MysticExtended:ButtonEnable("Main") end);
+	hideFloat:SetScript("OnClick", function() ME:ButtonEnable("Main") end);
 
 	local hideFloatCity = CreateFrame("CheckButton", "MysticExtendedOptions_FloatCitySetting", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
 	hideFloatCity:SetPoint("TOPLEFT", 15, -205);
@@ -122,7 +123,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	hideFloatCity.Lable:SetJustifyH("LEFT");
 	hideFloatCity.Lable:SetPoint("LEFT", 30, 0);
 	hideFloatCity.Lable:SetText("Show Floating Button Only In Citys");
-	hideFloatCity:SetScript("OnClick", function() MysticExtended:ButtonEnable("City") end);
+	hideFloatCity:SetScript("OnClick", function() ME:ButtonEnable("City") end);
 
 	local enableShare = CreateFrame("CheckButton", "MysticExtendedOptions_EnableShare", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
 	enableShare:SetPoint("TOPLEFT", 15, -240);
@@ -131,10 +132,10 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	enableShare.Lable:SetPoint("LEFT", 30, 0);
 	enableShare.Lable:SetText("Enable Enchant List Shareing");
 	enableShare:SetScript("OnClick", function() 
-		if MysticExtendedDB["AllowShareEnchantList"] then
-			MysticExtendedDB["AllowShareEnchantList"] = false
+		if ME.db["AllowShareEnchantList"] then
+			ME.db["AllowShareEnchantList"] = false
 		else
-			MysticExtendedDB["AllowShareEnchantList"] = true
+			ME.db["AllowShareEnchantList"] = true
 		end
 	end);
 
@@ -145,10 +146,10 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	enableInCombat.Lable:SetPoint("LEFT", 30, 0);
 	enableInCombat.Lable:SetText("Auto Reject Enchant List Shareing In Combat");
 	enableInCombat:SetScript("OnClick", function()
-		if MysticExtendedDB["AllowShareEnchantListInCombat"] then
-			MysticExtendedDB["AllowShareEnchantListInCombat"] = false
+		if ME.db.AllowShareEnchantListInCombat then
+			ME.db.AllowShareEnchantListInCombat = false
 		else
-			MysticExtendedDB["AllowShareEnchantListInCombat"] = true
+			ME.db.AllowShareEnchantListInCombat = true
 		end
 	end);
 
@@ -159,12 +160,12 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	trinketConvert.Lable:SetPoint("LEFT", 30, 0);
 	trinketConvert.Lable:SetText("Auto Bloodforge Untarnished Mystic Scrolls when Bloody Jar is used");
 	trinketConvert:SetScript("OnClick", function()
-		if MysticExtendedDB["AutoMysticScrollBloodforge"] then
-			MysticExtendedDB["AutoMysticScrollBloodforge"] = false
-			MysticExtended:UnregisterEvent("GOSSIP_SHOW");
+		if ME.db["AutoMysticScrollBloodforge"] then
+			ME.db["AutoMysticScrollBloodforge"] = false
+			ME:UnregisterEvent("GOSSIP_SHOW");
 		else
-			MysticExtendedDB["AutoMysticScrollBloodforge"] = true
-			MysticExtended:RegisterEvent("GOSSIP_SHOW", MysticExtended.BloodyJarOpen);
+			ME.db["AutoMysticScrollBloodforge"] = true
+			ME:RegisterEvent("GOSSIP_SHOW", ME.BloodyJarOpen);
 		end
 	end); ]]
 
@@ -175,10 +176,10 @@ local chatmsg = CreateFrame("CheckButton", "MysticExtendedOptions_ChatMSG", Myst
 	chatmsg.Lable:SetPoint("LEFT", 30, 0);
 	chatmsg.Lable:SetText("Show Enchant Learned Messages");
 	chatmsg:SetScript("OnClick", function()
-		if MysticExtendedDB["ChatMSG"] then
-			MysticExtendedDB["ChatMSG"] = false
+		if ME.db.ChatMSG then
+			ME.db.ChatMSG = false
 		else
-			MysticExtendedDB["ChatMSG"] = true
+			ME.db.ChatMSG = true
 		end
 	end);
 
@@ -189,19 +190,30 @@ local extractwarn = CreateFrame("CheckButton", "MysticExtendedOptions_ExtractWar
 	extractwarn.Lable:SetPoint("LEFT", 30, 0);
 	extractwarn.Lable:SetText("Toggle Extract Warning On Extract Interface");
 	extractwarn:SetScript("OnClick", function()
-		if MysticExtendedDB["ExtractWarn"] then
-			MysticExtendedDB["ExtractWarn"] = false
+		if ME.db.ExtractWarn then
+			ME.db.ExtractWarn = false
 		else
-			MysticExtendedDB["ExtractWarn"] = true
+			ME.db.ExtractWarn = true
 		end
 	end);
 
 local mapicon = CreateFrame("CheckButton", "MysticExtendedOptions_MapIcon", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
-	mapicon:SetPoint("TOPLEFT", 15, -380);
-	mapicon.Lable = mapicon:CreateFontString(nil , "BORDER", "GameFontNormal");
-	mapicon.Lable:SetJustifyH("LEFT");
-	mapicon.Lable:SetPoint("LEFT", 30, 0);
-	mapicon.Lable:SetText("Show/Hide Minimap Button");
+	mapicon:SetPoint("TOPLEFT", 15, -380)
+	mapicon.Lable = mapicon:CreateFontString(nil , "BORDER", "GameFontNormal")
+	mapicon.Lable:SetJustifyH("LEFT")
+	mapicon.Lable:SetPoint("LEFT", 30, 0)
+	mapicon.Lable:SetText("Show/Hide Minimap Button")
 	mapicon:SetScript("OnClick", function()
-		MysticExtended:ToggleMinimap();
+		ME:ToggleMinimap()
 	end);
+
+	local moneyframe = CreateFrame("Frame","MysticExtended_MoneyFrame", MysticExtendedOptionsFrame, "MoneyInputFrameTemplate")
+		moneyframe:SetPoint("TOPRIGHT", -70, -60)
+		moneyframe.Lable = moneyframe:CreateFontString(nil , "BORDER", "GameFontNormal")
+		moneyframe.Lable:SetJustifyH("LEFT")
+		moneyframe.Lable:SetPoint("TOPLEFT", -5, 20)
+		moneyframe.Lable:SetText("Reforge Minium Keep Price")
+		moneyframe:Hide()
+		MoneyInputFrame_SetOnValueChangedFunc(moneyframe, function()
+			MysticExtendedDB.MinGold = MoneyInputFrame_GetCopper(moneyframe)
+		end)

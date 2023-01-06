@@ -1,3 +1,4 @@
+local ME = LibStub("AceAddon-3.0"):GetAddon("MysticExtended")
 MysticExtended_ExtractMenu = AceLibrary("Dewdrop-2.0");
 local mainframe = CreateFrame("FRAME", "MysticExtendedExtractFrame", UIParent,"UIPanelDialogTemplate")
     mainframe:SetSize(460,508);
@@ -8,22 +9,17 @@ local mainframe = CreateFrame("FRAME", "MysticExtendedExtractFrame", UIParent,"U
     mainframe:SetScript("OnDragStart", function(self) mainframe:StartMoving() end);
     mainframe:SetScript("OnDragStop", function(self) mainframe:StopMovingOrSizing() end);
     mainframe:SetScript("OnShow", function()
-        MysticExtended:SearchBags()
-        MysticExtended:RegisterEvent("BAG_UPDATE", MysticExtended.SearchBags);
+        ME:SearchBags()
+        ME:RegisterEvent("BAG_UPDATE", ME.SearchBags);
         if not MysticEnchantingFrame:IsVisible() then
             MysticEnchantingFrame:UnregisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
         end
-        MysticExtended:RegisterEvent("CURRENCY_DISPLAY_UPDATE", MysticExtended_OnEvent);
-        MysticExtended:RegisterEvent("KNOWN_CURRENCY_TYPES_UPDATE", MysticExtended_OnEvent);
         MysticExtendedExtractCountText:SetText(string.format("Mystic Extracts: |cffFFFFFF%i|r", GetItemCount(98463)));
 
     end);
     mainframe:SetScript("OnHide", function()
-        MysticExtended:UnregisterEvent("BAG_UPDATE");
+        ME:UnregisterEvent("BAG_UPDATE");
         MysticEnchantingFrame:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
-        MysticExtended:UnregisterEvent("CURRENCY_DISPLAY_UPDATE");
-        MysticExtended:UnregisterEvent("KNOWN_CURRENCY_TYPES_UPDATE");
-
     end);
     mainframe.TitleText = mainframe:CreateFontString();
     mainframe.TitleText:SetFont("Fonts\\FRIZQT__.TTF", 12);
@@ -52,24 +48,32 @@ local extractbutton = CreateFrame("Button", "MysticExtendedExtractCount", Mystic
     extractbutton:SetScript("OnLeave", function () GameTooltip:Hide() end)
     extractbutton:Show();
 
-local inventoryItems = {};
-
---finds the next bag slot with an item to roll on
-function MysticExtended:SearchBags()
-    inventoryItems = {};
-    for b = 0, 4 do
-        for s = 1, GetContainerNumSlots(b) do
-            if MysticExtendedDB["ShowUnknown"] and GetContainerItemInfo(b,s) and select(4,GetContainerItemInfo(b,s)) > 2 then
-                if not IsReforgeEnchantmentKnown(GetREInSlot(b,s)) and MysticExtended:DoRarity(b, s, 4) then
-                    tinsert(inventoryItems,{b,s});
+local inventoryItems
+local bagThrottle = false
+--finds the next bag slot with an item with an enchant on it
+function ME:SearchBags()
+    if not bagThrottle then
+        inventoryItems = {}
+        for bagID = 0, 4 do
+            for slotID = 1, GetContainerNumSlots(bagID) do
+                local enchantID = GetREInSlot(bagID,slotID)
+                if enchantID then
+                    local quality,_,_,link = select(4,GetContainerItemInfo(bagID,slotID))
+                    if ME.db.ShowUnknown and quality and quality > 2 then
+                        if not IsReforgeEnchantmentKnown(enchantID) and ME:DoRarity(enchantID, 3) then
+                            tinsert(inventoryItems,{bagID,slotID,link,enchantID});
+                        end
+                    elseif quality and quality > 2 and ME:SearchLists(enchantID, "ExtractAny") then
+                        tinsert(inventoryItems,{bagID,slotID,link,enchantID});
+                    end
                 end
-            elseif GetContainerItemInfo(b,s) and select(4,GetContainerItemInfo(b,s)) > 2 and MysticExtended:DoSaveList(b,s,nil,"Extract") then
-                tinsert(inventoryItems,{b,s});
             end
         end
+        bagThrottle = true
+        ME.bagThrottle = ME:ScheduleTimer(function() bagThrottle = false end, .5);
+        MysticExtended_InventroyScrollFrameUpdate()
+        MysticExtendedExtractCountText:SetText(string.format("Mystic Extracts: |cffFFFFFF%i|r", GetItemCount(98463)));
     end
-    MysticExtended_InventroyScrollFrameUpdate()
-    MysticExtendedExtractCountText:SetText(string.format("Mystic Extracts: |cffFFFFFF%i|r", GetItemCount(98463)));
 end
 
 --Shows a menu with options and sharing options
@@ -82,7 +86,7 @@ local extractMenu = CreateFrame("Button", "MysticExtended_ExtractInterface_Quali
         if MysticExtended_ExtractMenu:IsOpen() then
             MysticExtended_ExtractMenu:Close();
         else
-            MysticExtended:ExtractMenuRegister(self);
+            ME:ExtractMenuRegister(self);
             MysticExtended_OptionsMenu:Open(this);
         end
     end);
@@ -94,38 +98,38 @@ local unknown = CreateFrame("CheckButton", "MysticExtendedExtract_ShowUnknown", 
 	unknown.Lable:SetPoint("LEFT", 30, 0);
 	unknown.Lable:SetText("Show All Unknown\nEnchants Of Selected Quality");
 	unknown:SetScript("OnClick", function()
-		if MysticExtendedDB["ShowUnknown"] then
-			MysticExtendedDB["ShowUnknown"] = false
+		if ME.db.ShowUnknown then
+			ME.db.ShowUnknown = false
 		else
-			MysticExtendedDB["ShowUnknown"] = true
+			ME.db.ShowUnknown = true
 		end
-        MysticExtended:SearchBags();
+        ME:SearchBags();
 	end);
 
-local function QualitySet(tablenum, state)
-    if state then
-        MysticExtendedDB["QualityList"][tablenum][4] = false;
+local function QualitySet(listNum,quality)
+    if ME.db.QualityList[listNum][quality] then
+        ME.db.QualityList[listNum][quality] = false;
     else
-        MysticExtendedDB["QualityList"][tablenum][4] = true;
+        ME.db.QualityList[listNum][quality] = true;
     end
-    MysticExtended:SearchBags();
+    ME:SearchBags();
 end
 
-function MysticExtended:ExtractMenuRegister(self)
+function ME:ExtractMenuRegister(self)
     MysticExtended_ExtractMenu:Register(self,
         'point', function(parent)
             return "TOP", "BOTTOM"
         end,
         'children', function(level, value)
             if level == 1 then
-                for k, v in ipairs(MysticExtendedDB["QualityList"]) do
-                    local qualityColor = select(4, GetItemQualityColor(v[3]))
+                for k, v in ipairs(ME.QualityList) do
+                    local qualityColor = select(4, GetItemQualityColor(v[2]))
                     MysticExtended_ExtractMenu:AddLine(
                         'text', qualityColor .. v[1],
-                        'arg1', k,
-                        'arg2', v[4],
+                        'arg1', 3,
+                        'arg2', k,
                         'func', QualitySet,
-                        'checked', v[4]
+                        'checked', ME.db.QualityList[3][k]
                     )
                 end
                 MysticExtended_ExtractMenu:AddLine(
@@ -183,13 +187,15 @@ function MysticExtended_InventroyScrollFrameUpdate()
         scrollFrame.rows[i]:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD");
 		if value <= maxValue then
 			local row = scrollFrame.rows[i]
-            local qualityColor = select(4,GetItemQualityColor(MYSTIC_ENCHANTS[GetREInSlot(inventoryItems[value][1],inventoryItems[value][2])].quality))
-            row.Text:SetText(select(7, GetContainerItemInfo(inventoryItems[value][1],inventoryItems[value][2])));
-            row.Text1:SetText(qualityColor..GetSpellInfo(MYSTIC_ENCHANTS[GetREInSlot(inventoryItems[value][1],inventoryItems[value][2])].spellID))
-            row.link = select(7, GetContainerItemInfo(inventoryItems[value][1],inventoryItems[value][2]));
-            row.link2 = MysticExtended:CreateItemLink(GetREInSlot(inventoryItems[value][1],inventoryItems[value][2]));
-			row.bag = inventoryItems[value][1];
-            row.slot = inventoryItems[value][2];
+            local qualityColor = select(4,GetItemQualityColor(MYSTIC_ENCHANTS[inventoryItems[value][4]].quality))
+            row.Text:SetText(inventoryItems[value][3])
+            row.Text1:SetText(qualityColor..GetSpellInfo(MYSTIC_ENCHANTS[inventoryItems[value][4]].spellID))
+            row.link = inventoryItems[value][3]
+            row.link2 = ME:CreateItemLink(inventoryItems[value][4]);
+			row.bag = inventoryItems[value][1]
+            row.slot = inventoryItems[value][2]
+            row.tNumber = value
+            row.enchantID = inventoryItems[value][4]
             row:Show()
 		else
 			scrollFrame.rows[i]:Hide()
@@ -197,16 +203,11 @@ function MysticExtended_InventroyScrollFrameUpdate()
 	end
 end
 
-local scrollSlider = CreateFrame("ScrollFrame","MysticExtendedDEListFrameScroll",MysticExtended_ScrollFrame,"FauxScrollFrameTemplate");
+local scrollSlider = CreateFrame("ScrollFrame","MysticExtendedDEListFrameScroll",MysticExtended_DE_ScrollFrame,"FauxScrollFrameTemplate");
 scrollSlider:SetPoint("TOPLEFT", 0, -8)
 scrollSlider:SetPoint("BOTTOMRIGHT", -30, 8)
 scrollSlider:SetScript("OnVerticalScroll", function(self, offset)
     self.offset = math.floor(offset / ROW_HEIGHT + 0.5)
-    MysticExtended_InventroyScrollFrameUpdate();
-
-end)
-
-scrollSlider:SetScript("OnShow", function()
     MysticExtended_InventroyScrollFrameUpdate();
 end)
 
@@ -225,12 +226,14 @@ local rows = setmetatable({}, { __index = function(t, i)
     row.Text1:SetPoint("LEFT",row,270,0);
     row.Text1:SetJustifyH("LEFT");
     row:SetScript("OnClick", function()
-        if MysticExtendedDB["ExtractWarn"] then
-            StaticPopupDialogs.MYSTICEXTENDED_CONFIRM_EXTRACT.item = {row.bag,row.slot};
+        if ME.db.ExtractWarn then
+            StaticPopupDialogs.MYSTICEXTENDED_CONFIRM_EXTRACT.item = {row.bag,row.slot,row.enchantID};
             StaticPopup_Show("MYSTICEXTENDED_CONFIRM_EXTRACT",row.Text1:GetText())
         else
-            MysticExtended:ExtractEnchant(row.bag,row.slot);
-            MysticExtended:SearchBags();
+            if ME:ExtractEnchant(row.bag,row.slot,row.enchantID) then
+                tremove(inventoryItems,row.tNumber)
+                MysticExtended_InventroyScrollFrameUpdate()
+            end
         end
     end)
     row:SetScript("OnEnter", function(self)
@@ -261,8 +264,8 @@ StaticPopupDialogs["MYSTICEXTENDED_CONFIRM_EXTRACT"] = {
 		self:SetFrameStrata("TOOLTIP");
 	end,
 	OnAccept = function(self)
-        MysticExtended:ExtractEnchant(StaticPopupDialogs.MYSTICEXTENDED_CONFIRM_EXTRACT.item[1],StaticPopupDialogs.MYSTICEXTENDED_CONFIRM_EXTRACT.item[2]);
-        MysticExtended:SearchBags();
+        ME:ExtractEnchant(StaticPopupDialogs.MYSTICEXTENDED_CONFIRM_EXTRACT.item[1],StaticPopupDialogs.MYSTICEXTENDED_CONFIRM_EXTRACT.item[2],StaticPopupDialogs.MYSTICEXTENDED_CONFIRM_EXTRACT.item[3]);
+        ME:SearchBags();
 	end,
 	timeout = 0,
 	whileDead = 1,
