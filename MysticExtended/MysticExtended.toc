@@ -6,6 +6,6 @@
 ## X-Category: UnitFrame
 ## X-OptionsFrame: MysticExtendedOptionsFrame
 ## DefaultState: enabled
-## Version: 1.2.0
+## Version: 1.3.0
 
 embeds.xml
