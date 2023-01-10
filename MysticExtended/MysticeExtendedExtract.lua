@@ -70,7 +70,7 @@ function ME:SearchBags()
             end
         end
         bagThrottle = true
-        ME.bagThrottle = ME:ScheduleTimer(function() bagThrottle = false end, .5);
+        ME.bagThrottle = ME:ScheduleTimer(function() bagThrottle = false end, .1);
         MysticExtended_InventroyScrollFrameUpdate()
         MysticExtendedExtractCountText:SetText(string.format("Mystic Extracts: |cffFFFFFF%i|r", GetItemCount(98463)));
     end

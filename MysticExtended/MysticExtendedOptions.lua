@@ -202,7 +202,7 @@ local mapicon = CreateFrame("CheckButton", "MysticExtendedOptions_MapIcon", Myst
 	mapicon.Lable = mapicon:CreateFontString(nil , "BORDER", "GameFontNormal")
 	mapicon.Lable:SetJustifyH("LEFT")
 	mapicon.Lable:SetPoint("LEFT", 30, 0)
-	mapicon.Lable:SetText("Show/Hide Minimap Button")
+	mapicon.Lable:SetText("Hide Minimap Button")
 	mapicon:SetScript("OnClick", function()
 		ME:ToggleMinimap()
 	end);
@@ -214,6 +214,9 @@ local mapicon = CreateFrame("CheckButton", "MysticExtendedOptions_MapIcon", Myst
 		moneyframe.Lable:SetPoint("TOPLEFT", -5, 20)
 		moneyframe.Lable:SetText("Reforge Minium Keep Price")
 		moneyframe:Hide()
+		moneyframe:SetScript("OnShow", function()
+		MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,MysticExtendedDB.MinGold)
+		end)
 		MoneyInputFrame_SetOnValueChangedFunc(moneyframe, function()
 			MysticExtendedDB.MinGold = MoneyInputFrame_GetCopper(moneyframe)
 		end)

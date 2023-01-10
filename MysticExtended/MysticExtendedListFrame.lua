@@ -289,13 +289,19 @@ local rows = setmetatable({}, { __index = function(t, i)
 	local row = CreateFrame("Button", "$parentRow"..i, scrollFrame)
 	row:SetSize(150, ROW_HEIGHT)
 	row:SetNormalFontObject(GameFontHighlightLeft)
-    row:SetScript("OnClick", function()
+    row:RegisterForClicks("LeftButtonDown","RightButtonDown")
+    row:SetScript("OnClick", function(self,button)
         local item = tonumber(row.enchantID)
         local itemNum = GetSavedEnchant(item)
-        if ME.db.EnchantSaveLists[ME.db.currentSelectedList][itemNum] then
-            tremove(ME.db.EnchantSaveLists[ME.db.currentSelectedList],itemNum)
+        if button == "RightButton" then
+            if ME.db.EnchantSaveLists[ME.db.currentSelectedList][itemNum] then
+                tremove(ME.db.EnchantSaveLists[ME.db.currentSelectedList],itemNum)
+            end
+            MysticExtended_ScrollFrameUpdate()    
+        elseif button == "LeftButton" then
+            Internal_CopyToClipboard(GetSpellInfo(MYSTIC_ENCHANTS[row.enchantID].spellID))
         end
-        MysticExtended_ScrollFrameUpdate();
+        
     end)
     row:SetScript("OnEnter", function(self)
         ItemTemplate_OnEnter(self)
@@ -315,7 +321,7 @@ scrollFrame.rows = rows
 
 function ME:CreateItemLink(id)
     local qualityColor = select(4,GetItemQualityColor(MYSTIC_ENCHANTS[id].quality))
-    local link = qualityColor.."|Hspell:"..MYSTIC_ENCHANTS[id].spellID.."|h["..MYSTIC_ENCHANTS[id].spellName.."]|h|r"
+    local link = qualityColor.."|Hspell:"..MYSTIC_ENCHANTS[id].spellID.."|h["..GetSpellInfo(MYSTIC_ENCHANTS[id].spellID).."]|h|r"
     return link
 end
 
@@ -348,7 +354,7 @@ local reforgebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameReforge
     reforgebuttonlist:SetPoint("TOP", MysticEnchantingFrame, "TOP", 230, -33);
     reforgebuttonlist:SetText("Start Reforge");
     reforgebuttonlist:RegisterForClicks("LeftButtonDown", "RightButtonDown");
-    reforgebuttonlist:SetScript("OnClick", function(self, btnclick, down) MysticExtended_OnClick(self,btnclick) end);
+    reforgebuttonlist:SetScript("OnClick", function(self, btnclick) MysticExtended_OnClick(self,btnclick) end);
 
 --Shows a menu with options and sharing options
 local sharebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameMenuButton", MysticExtendedListFrame, "OptionsButtonTemplate");
@@ -395,7 +401,7 @@ local meFrame = MysticEnchantingFrame
     meFrame.EnchantTypeList:SetPoint("TOPRIGHT", meFrame, -200, -32)
 
 --Show list view when Mystic Enchanting frame opens
-MysticEnchantingFrame:HookScript("OnShow",
+meFrame:HookScript("OnShow",
         function()
             if ME.db.ListFrameLastState then
                 MysticExtendedListFrame:Show();
@@ -406,10 +412,11 @@ MysticEnchantingFrame:HookScript("OnShow",
             end
         end)
 --Hide it when it closes
-MysticEnchantingFrame:HookScript("OnHide",
+meFrame:HookScript("OnHide",
         function()
         MysticExtendedListFrame:Hide();
         MYSTICEXTENDED_ITEMSET = false
+        MYSTICEXTENDED_BAGID, MYSTICEXTENDED_SLOTID = nil,nil
         end)
 
 hooksecurefunc("ContainerFrameItemButton_OnClick", function(self, button)

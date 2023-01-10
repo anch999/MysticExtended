@@ -2,11 +2,13 @@ MysticExtended = LibStub("AceAddon-3.0"):NewAddon("MysticExtended", "AceConsole-
 local ME = LibStub("AceAddon-3.0"):GetAddon("MysticExtended")
 local icon = LibStub('LibDBIcon-1.0');
 local addonName, addonTable = ...
-local minimap = LibStub:GetLibrary('LibDataBroker-1.1'):NewDataObject(addonName, {
+MYSTICEXTENDED_MINIMAP = LibStub:GetLibrary('LibDataBroker-1.1'):NewDataObject(addonName, {
     type = 'data source',
     text = "MysticExtended",
     icon = 'Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\inv_blacksmithing_khazgoriananvil1',
   })
+
+local minimap = MYSTICEXTENDED_MINIMAP
 MysticExtended_DewdropMenu = AceLibrary("Dewdrop-2.0");
 MysticExtended_MiniMapMenu = AceLibrary("Dewdrop-2.0");
 local realmName = GetRealmName();
@@ -292,7 +294,7 @@ function ME:RollEnchant()
     --find item to roll on
     reFound = false
     local bagID, slotID, reforge
-    if MYSTICEXTENDED_ITEMSET then
+    if MYSTICEXTENDED_ITEMSET and MYSTICEXTENDED_BAGID and MYSTICEXTENDED_SLOTID then
         reforge = ME:RollCheck(MYSTICEXTENDED_BAGID, MYSTICEXTENDED_SLOTID, true)
         bagID, slotID = MYSTICEXTENDED_BAGID, MYSTICEXTENDED_SLOTID
         if not reforge then
@@ -670,7 +672,7 @@ local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticEx
     reforgebutton.Highlight:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\Slot2Selected");
     reforgebutton.Highlight:Hide();
     reforgebutton:RegisterForClicks("LeftButtonDown", "RightButtonDown");
-    reforgebutton:SetScript("OnClick", function(self, btnclick, down) MysticExtended_OnClick(self,btnclick) end);
+    reforgebutton:SetScript("OnClick", function(self, btnclick) MysticExtended_OnClick(self,btnclick) end);
     reforgebutton:SetScript("OnEnter", function()
         reforgebutton.Highlight:Show();
         if IsShiftKeyDown() then
@@ -1016,14 +1018,17 @@ function ME:OnEnable()
     ME:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST", MysticExtended_OnEvent);
 
     if not ME.db.minimap then
-        MysticExtendedOptions_MapIcon:SetChecked(false);
         ME.db.minimap = {hide = false}
-    else
-        MysticExtendedOptions_MapIcon:SetChecked(true);
     end
 
     if icon then
-        icon:Register('MysticExtended', minimap, ME.db.Minimap)
+        icon:Register('MysticExtended', minimap, ME.db.minimap)
+    end
+
+    if ME.db.minimap and ME.db.minimap.hide then
+        MysticExtendedOptions_MapIcon:SetChecked(true);
+    else
+        MysticExtendedOptions_MapIcon:SetChecked(false);
     end
 
     if not ME.db.MinGold then
@@ -1035,7 +1040,7 @@ function ME:OnEnable()
         mysticMastro = true
         MysticExtended_MoneyFrame:Show()
     end
-
+    MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,MysticExtendedDB.MinGold)
 end
 
 -- All credit for this func goes to Tekkub and his picoGuild!
