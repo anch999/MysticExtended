@@ -271,3 +271,31 @@ StaticPopupDialogs["MYSTICEXTENDED_CONFIRM_EXTRACT"] = {
 	whileDead = 1,
 	hideOnEscape = 1
 }
+
+    mainframe.commenbtn = CreateFrame("Button", nil, MysticExtendedExtractFrame)
+	mainframe.commenbtn:SetPoint("TOP", 100, -40)
+	mainframe.commenbtn:SetSize(110,20)
+    mainframe.commenbtn.Lable = mainframe.commenbtn:CreateFontString(nil , "BORDER", "GameFontNormal")
+	mainframe.commenbtn.Lable:SetJustifyH("LEFT")
+	mainframe.commenbtn.Lable:SetPoint("LEFT", 0, 0);
+	mainframe.commenbtn:SetScript("OnShow", function() mainframe.commenbtn.Lable:SetText("Number of Enchants") end)
+    mainframe.commenbtn:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(select(4, GetItemQualityColor(2)).."Commen Enchants")
+        GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Commen.Known.."/"..ME.db.KnownEnchantNumbers.Commen.Total)
+        GameTooltip:AddLine("|cffffffffUnknown: "..ME.db.KnownEnchantNumbers.Commen.Unknown)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(select(4, GetItemQualityColor(3)).."Rare Enchants")
+        GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Rare.Known.."/"..ME.db.KnownEnchantNumbers.Rare.Total)
+        GameTooltip:AddLine("|cffffffffUnknown: "..ME.db.KnownEnchantNumbers.Rare.Unknown)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(select(4, GetItemQualityColor(4)).."Epic Enchants")
+        GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Epic.Known.."/"..ME.db.KnownEnchantNumbers.Epic.Total)
+        GameTooltip:AddLine("|cffffffffUnknown: "..ME.db.KnownEnchantNumbers.Epic.Unknown)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(select(4, GetItemQualityColor(5)).."Legendary Enchants")
+        GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Legendary.Known.."/"..ME.db.KnownEnchantNumbers.Legendary.Total)
+        GameTooltip:AddLine("|cffffffffUnknown: "..ME.db.KnownEnchantNumbers.Legendary.Unknown)
+        GameTooltip:Show()
+        end)
+    mainframe.commenbtn:SetScript("OnLeave", function() GameTooltip:Hide() end)

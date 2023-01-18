@@ -46,9 +46,9 @@ Get the EnchantList, Deserialize it and save it in the savedvariables table
 function MysticExtended_GetEnchantList(wlstrg,sendername)
 	local success, wltab = ME:Deserialize(wlstrg);
 	if success then
-		tinsert(ME.db.EnchantSaveLists, {Name = wltab.Name, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}});
+		tinsert(ME.EnchantSaveLists, {Name = wltab.Name, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}});
 		for i,v in ipairs(wltab) do
-			tinsert(ME.db.EnchantSaveLists[#ME.db.EnchantSaveLists], v)
+			tinsert(ME.EnchantSaveLists[#ME.EnchantSaveLists], v)
 		end
 		ME:MenuInitialize();
 	end
@@ -89,10 +89,10 @@ function ME:OnCommReceived(prefix, message, distribution, sender)
 		SpamFilter[string.lower(sender)] = GetTime()
 	elseif message == "AcceptEnchantList" then
 		local wsltable = {};
-			for i,v in ipairs(ME.db.EnchantSaveLists[ME.db.currentSelectedList]) do
+			for i,v in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
 				tinsert(wsltable,{v[1]});
 			end
-			wsltable.Name = ME.db.EnchantSaveLists[ME.db.currentSelectedList].Name;
+			wsltable.Name = ME.EnchantSaveLists[ME.db.currentSelectedList].Name;
 		local sendData = ME:Serialize(wsltable);
 		ME:SendCommMessage("MysticExtendedEnchantList", sendData, "WHISPER", sender);
 	elseif message == "EnchantListRequest" then
@@ -174,9 +174,9 @@ StaticPopupDialogs["MYSTICEXTENDED_IMPORT_ENCHANTLIST"] = {
 		local data = string.sub(_G[this:GetParent():GetName().."EditBox"]:GetText(), 5)
 		local success, wltab = ME:Deserialize(data);
 	if success then
-		tinsert(ME.db.EnchantSaveLists, {Name = wltab.Name, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}});
+		tinsert(ME.EnchantSaveLists, {Name = wltab.Name, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}});
 		for i,v in ipairs(wltab) do
-			tinsert(ME.db.EnchantSaveLists[#ME.db.EnchantSaveLists], v)
+			tinsert(ME.EnchantSaveLists[#ME.EnchantSaveLists], v)
 		end
 		ME:MenuInitialize();
 	end

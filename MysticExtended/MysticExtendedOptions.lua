@@ -6,7 +6,6 @@ function ME:OptionsToggle()
 		MysticExtended_OptionsMenu:Close();
 		Collections:Hide();
 		InterfaceOptionsFrame_OpenToCategory("MysticExtended");
-		MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,MysticExtendedDB.MinGold)
 	end
 end
 
@@ -114,7 +113,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	hideFloat.Lable = hideFloat:CreateFontString(nil , "BORDER", "GameFontNormal");
 	hideFloat.Lable:SetJustifyH("LEFT");
 	hideFloat.Lable:SetPoint("LEFT", 30, 0);
-	hideFloat.Lable:SetText("Show/Hide Floating Button");
+	hideFloat.Lable:SetText("Show Floating Button");
 	hideFloat:SetScript("OnClick", function() ME:ButtonEnable("Main") end);
 
 	local hideFloatCity = CreateFrame("CheckButton", "MysticExtendedOptions_FloatCitySetting", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
@@ -132,10 +131,10 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	enableShare.Lable:SetPoint("LEFT", 30, 0);
 	enableShare.Lable:SetText("Enable Enchant List Shareing");
 	enableShare:SetScript("OnClick", function() 
-		if ME.db["AllowShareEnchantList"] then
-			ME.db["AllowShareEnchantList"] = false
+		if ME.db.AllowShareEnchantList then
+			ME.db.AllowShareEnchantList = false
 		else
-			ME.db["AllowShareEnchantList"] = true
+			ME.db.AllowShareEnchantList = true
 		end
 	end);
 
@@ -144,7 +143,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	enableInCombat.Lable = enableInCombat:CreateFontString(nil , "BORDER", "GameFontNormal");
 	enableInCombat.Lable:SetJustifyH("LEFT");
 	enableInCombat.Lable:SetPoint("LEFT", 30, 0);
-	enableInCombat.Lable:SetText("Auto Reject Enchant List Shareing In Combat");
+	enableInCombat.Lable:SetText("Auto Reject Enchant List\nShareing In Combat");
 	enableInCombat:SetScript("OnClick", function()
 		if ME.db.AllowShareEnchantListInCombat then
 			ME.db.AllowShareEnchantListInCombat = false
@@ -174,7 +173,7 @@ local chatmsg = CreateFrame("CheckButton", "MysticExtendedOptions_ChatMSG", Myst
 	chatmsg.Lable = chatmsg:CreateFontString(nil , "BORDER", "GameFontNormal");
 	chatmsg.Lable:SetJustifyH("LEFT");
 	chatmsg.Lable:SetPoint("LEFT", 30, 0);
-	chatmsg.Lable:SetText("Show Enchant Learned Messages");
+	chatmsg.Lable:SetText("Show Enchant\nLearned Messages");
 	chatmsg:SetScript("OnClick", function()
 		if ME.db.ChatMSG then
 			ME.db.ChatMSG = false
@@ -188,7 +187,7 @@ local extractwarn = CreateFrame("CheckButton", "MysticExtendedOptions_ExtractWar
 	extractwarn.Lable = extractwarn:CreateFontString(nil , "BORDER", "GameFontNormal");
 	extractwarn.Lable:SetJustifyH("LEFT");
 	extractwarn.Lable:SetPoint("LEFT", 30, 0);
-	extractwarn.Lable:SetText("Toggle Extract Warning On Extract Interface");
+	extractwarn.Lable:SetText("Toggle Extract Warning On\nExtract Interface");
 	extractwarn:SetScript("OnClick", function()
 		if ME.db.ExtractWarn then
 			ME.db.ExtractWarn = false
@@ -215,8 +214,22 @@ local mapicon = CreateFrame("CheckButton", "MysticExtendedOptions_MapIcon", Myst
 		moneyframe.Lable:SetText("Reforge Minium Keep Price")
 		moneyframe:Hide()
 		moneyframe:SetScript("OnShow", function()
-		MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,MysticExtendedDB.MinGold)
+		MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,ME.db.MinGold)
 		end)
 		MoneyInputFrame_SetOnValueChangedFunc(moneyframe, function()
-			MysticExtendedDB.MinGold = MoneyInputFrame_GetCopper(moneyframe)
+			ME.db.MinGold = MoneyInputFrame_GetCopper(moneyframe)
+		end)
+
+		local minExtract = CreateFrame("EditBox", "MysticExtendedOptions_minExtracteditbox", MysticExtendedOptionsFrame, "InputBoxTemplate");
+		minExtract:SetPoint("TOPRIGHT", -215, -90)
+		minExtract:SetSize(30,30);
+		minExtract.Lable = minExtract:CreateFontString(nil , "BORDER", "GameFontNormal")
+		minExtract.Lable:SetJustifyH("LEFT")
+		minExtract.Lable:SetPoint("LEFT", 35, 0)
+		minExtract.Lable:SetText("Minimum Number of Extracts\nTo Keep While Auto Extracting")
+		minExtract:SetAutoFocus(false);
+		minExtract:SetScript("OnTextChanged", function()
+			if tonumber(minExtract:GetText()) then
+				ME.db.minExtractNum = tonumber(minExtract:GetText())
+			end
 		end)

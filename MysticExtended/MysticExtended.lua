@@ -17,23 +17,33 @@ local RollExtracts = false;
 local bagnonGuildbank = false;
 local mysticMastro = false;
 MYSTICEXTENDED_ITEMSET = false;
+local AutoOn = false;
+local reFound = false;
 
-local DefaultMysticExtendedDB  = {
-["EnchantSaveLists"] = {[1] = {["Name"] = "Enchant List 1", [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}}},
-["ReRollItems"] = {18863, 18853,6992720},
-["ListFrameLastState"] = false,
-["currentSelectedList"] = 1,
-["RollByQuality"] = true,
-["ButtonEnable"] = true,
-["QualityList"] = {
-    {true,true,true,true},  --Roll Quality
-    {true,true,true,true},  --Unknown Quality
-    {true,true,true,true},  --Extract Frame Quality
-},
-["REFORGE_RETRY_DELAY"] = 5,
-["ShowInCity"] = false,
-["MinGold"] = 20000
-};
+local DefaultSettings = {
+    { TableName = "ReRollItems", 18863, 18853, 6992720 },
+    { TableName = "ListFrameLastState", false },
+    { TableName = "currentSelectedList", 1 },
+    { TableName = "RollByQuality", true },
+    { TableName = "ButtonEnable", true , CheckBox = "MysticExtendedOptions_FloatSetting" },
+    { TableName = "QualityList",
+        { true, true, true, true }, --Roll Quality
+        { true, true, true, true }, --Unknown Quality
+        { true, true, true, true }, --Extract Frame Quality
+    },
+    { TableName = "REFORGE_RETRY_DELAY", 5 },
+    { TableName = "ShowInCity", false },
+    { TableName = "MinGold", 20000 },
+    { TableName = "minExtractNum", 0, Text = "MysticExtendedOptions_minExtracteditbox"},
+    { TableName = "UnknownAutoExtract", false },
+    { TableName = "ChatMSG", true, CheckBox = "MysticExtendedOptions_ChatMSG" },
+    { TableName = "ShowUnknown", false, CheckBox = "MysticExtendedExtract_ShowUnknown" },
+    { TableName = "AllowShareEnchantListInCombat", true, CheckBox = "MysticExtendedOptions_EnableShareCombat" },
+    { TableName = "AllowShareEnchantList", false, CheckBox = "MysticExtendedOptions_EnableShare" },
+    { TableName = "ExtractWarn", true, CheckBox = "MysticExtendedOptions_ExtractWarning" },
+    { TableName = "lastXpLevel", 0 },
+    { TableName = "nextLevel", 0 },
+}
 
 ME.QualityList = {
     [1] = {"Uncommon",2},
@@ -78,8 +88,8 @@ function ME:SearchLists(enchantID, type)
         return true
     end
 
-    for _, v in ipairs(ME.db.EnchantSaveLists) do
-        for a, b in ipairs(v) do
+    for _, v in ipairs(ME.EnchantSaveLists) do
+        for _, b in ipairs(v) do
             if b[1] == enchantID and getStates(v) then
                 return true
             end
@@ -93,7 +103,7 @@ function ME:RollCheck(bagID, slotID, extractoff)
     local enchantID = GetREInSlot(bagID, slotID)
     if not enchantID then return true end
     local extractCount = GetItemCount(98463)
-        if (ME.db.UnknownAutoExtract and extractCount and (extractCount > 0) and not IsReforgeEnchantmentKnown(enchantID) and ME:DoRarity(enchantID,2)) or
+        if (ME.db.UnknownAutoExtract and extractCount and (extractCount > ME.db.minExtractNum) and not IsReforgeEnchantmentKnown(enchantID) and ME:DoRarity(enchantID,2)) or
             ME:SearchLists(enchantID, "Extract") or
             (extractCount and (extractCount > 0) and ME:SearchLists(enchantID, "ExtractOnly")) then
             --extract if we have extracts keep if not
@@ -137,8 +147,6 @@ function ME:DoRarity(enchantID, iNumber)
     end
 end
 
-local AutoOn = false;
-local reFound = false;
 --timer to try to roll an enchant every 3 seconds if no altar up
 function ME:Repeat()
     ME:RollEnchant();
@@ -172,6 +180,47 @@ local function GetRequiredRollsForLevel(level)
     return floor(354 * level + 7.5 * level * level)
 end
 
+function ME:CalculateKnowEnchants()
+    local known = {
+        Commen = { Total = 0, Known = 0, Unknown = 0 },
+        Rare = { Total = 0, Known = 0, Unknown = 0 },
+        Epic = { Total = 0, Known = 0, Unknown = 0 },
+        Legendary = { Total = 0, Known = 0, Unknown = 0 }
+    }
+
+    for _, v in pairs(MYSTIC_ENCHANTS) do
+       if v.enchantID then
+          if v.quality == 2 then
+             known.Commen.Total = known.Commen.Total + 1
+          elseif v.quality == 3 then
+            known.Rare.Total = known.Rare.Total + 1
+          elseif v.quality == 4 then
+            known.Epic.Total = known.Epic.Total + 1
+          elseif v.quality == 5 then
+            known.Legendary.Total = known.Legendary.Total + 1
+          end
+          
+          if IsReforgeEnchantmentKnown(v.enchantID) then
+             if v.quality == 2 then
+                known.Commen.Known = known.Commen.Known + 1
+             elseif v.quality == 3 then
+                known.Rare.Known = known.Rare.Known + 1
+             elseif v.quality == 4 then
+                known.Epic.Known = known.Epic.Known + 1
+             elseif v.quality == 5 then
+                known.Legendary.Known = known.Legendary.Known + 1
+             end
+          end
+       end
+    end
+    known.Commen.Unknown = known.Commen.Total - known.Commen.Known
+    known.Rare.Unknown = known.Rare.Total - known.Rare.Known
+    known.Epic.Unknown = known.Epic.Total - known.Epic.Known
+    known.Legendary.Unknown = known.Legendary.Total - known.Legendary.Known
+
+    ME.db.KnownEnchantNumbers = known
+end
+
 --[[
 Event Handlers
 ]]
@@ -195,15 +244,18 @@ function MysticExtended_OnEvent(event, arg1, arg2, arg3)
     if event == "COMMENTATOR_SKIRMISH_QUEUE_REQUEST" then
         if arg1 == "ASCENSION_REFORGE_ENCHANTMENT_LEARNED" then
             local RE = GetREData(arg2)
-            ME:RemoveFound(RE.enchantID)
+            local notOnList = ME:RemoveFound(RE.enchantID)
+            if ME.db.ChatMSG and notOnList then
+                local itemLink = ME:CreateItemLink(RE.enchantID)
+                DEFAULT_CHAT_FRAME:AddMessage(itemLink .. " Has been added to your collection")
+            end
             MysticExtendedExtractCountText:SetText(string.format("Mystic Extracts: |cffFFFFFF%i|r", GetItemCount(98463)))
-        elseif arg1 == "ASCENSION_REFORGE_PROGRESS_UPDATE" then
+        elseif AutoOn and arg1 == "ASCENSION_REFORGE_PROGRESS_UPDATE" then
             --Shows how many more enchants to level up your atlar
-            local xpGained = arg2 - ME.db.lastXpLevel[realmName]
-            local nextLevel = (GetRequiredRollsForLevel(arg3) - arg2) / xpGained
-            ME.db.lastItemXpLevel[realmName] = math.floor(nextLevel) + 1
-            MysticExtendedNextLevelText:SetText("Next Altar Level in "..(math.floor(nextLevel) + 1).." Enchants")
-            ME.db.lastXpLevel[realmName] = arg2
+            local xpGained = arg2 - ME.db.lastXpLevel
+            ME.db.nextLevel = math.floor((GetRequiredRollsForLevel(arg3) - arg2) / xpGained) + 1
+            MysticExtendedNextLevelText:SetText("Next Altar Level in "..(ME.db.nextLevel).." Enchants")
+            ME.db.lastXpLevel = arg2
         end
     end
 
@@ -242,7 +294,8 @@ function ME:RemoveFound(enchantID)
         end
     end
 
-    for _,v in pairs(ME.db.EnchantSaveLists) do
+    local notOnList = true
+    for _,v in pairs(ME.EnchantSaveLists) do
         if v[realmName].enableDisenchant or v[realmName].enableRollExt then
             local remove, ID = findEnchantID(v)
                 if remove then
@@ -250,13 +303,13 @@ function ME:RemoveFound(enchantID)
                     if ME.db.ChatMSG then
                         local itemLink = ME:CreateItemLink(enchantID)
                         DEFAULT_CHAT_FRAME:AddMessage(itemLink .. " Has been added to your collection and removed from |cFF00FFFF".. v.Name .. " |cfffffffflist")
+                        notOnList = false
                     end
                 end
         end
     end
-
-
-        MysticExtended_ScrollFrameUpdate()
+    MysticExtended_ScrollFrameUpdate()
+    return notOnList
 end
 
 function ME:ExtractEnchant(bagID,slotID,enchantID)
@@ -306,7 +359,7 @@ function ME:RollEnchant()
 
 
     --show run count down
-    MysticExtendedNextLevelText:SetText("Next Altar Level in "..(ME.db.lastItemXpLevel[realmName]).." Enchants")
+    MysticExtendedNextLevelText:SetText("Next Altar Level in "..(ME.db.nextLevel).." Enchants")
     MysticExtendedNextLevelText:Show()
     MysticExtendedCountDownFrame:Show()
     MysticExtendedCountDownText:SetText("You Have " .. GetItemCount(98462) .. " Runes Left")
@@ -366,12 +419,12 @@ local function QualitySet(listNum,quality)
 end
 
 local function EnableClick(list,cat,cat2)
-    if ME.db.EnchantSaveLists[list][realmName][cat] then
-        ME.db.EnchantSaveLists[list][realmName][cat] = false;
+    if ME.EnchantSaveLists[list][realmName][cat] then
+        ME.EnchantSaveLists[list][realmName][cat] = false;
     else
-        ME.db.EnchantSaveLists[list][realmName][cat] = true;
+        ME.EnchantSaveLists[list][realmName][cat] = true;
         if cat2 then
-            ME.db.EnchantSaveLists[list][realmName][cat2] = false;
+            ME.EnchantSaveLists[list][realmName][cat2] = false;
         end
     end
 end
@@ -439,7 +492,7 @@ function ME:RollMenuRegister(self)
                 MysticExtended_DewdropMenu:AddLine(
                     'text', "Select Lists to Roll",
                     'hasArrow', true,
-                    'value', ME.db.EnchantSaveLists,
+                    'value', ME.EnchantSaveLists,
                     'notCheckable', true
                 )
                 MysticExtended_DewdropMenu:AddLine(
@@ -518,7 +571,7 @@ function ME:RollMenuRegister(self)
                             'checked', ME.db.QualityList[1][k]
                         )
                     end
-                elseif value == ME.db.EnchantSaveLists then
+                elseif value == ME.EnchantSaveLists then
                     for i,v in ipairs(value) do
                         realmCheck(v);
                         MysticExtended_DewdropMenu:AddLine(
@@ -784,24 +837,39 @@ function ME:ExtractToggle()
 end
 
 function ME:OnInitialize()
-    if (MysticExtendedDB == nil) then
-        MysticExtendedDB = CloneTable(DefaultMysticExtendedDB);
-    end
-    ME.db = MysticExtendedDB
     realmName = GetRealmName();
-    for _, v in ipairs(ME.db.EnchantSaveLists) do
+    if (MysticExtendedDB == nil) then
+        MysticExtendedDB = {Settings = {}}
+    elseif not MysticExtendedDB.Settings[realmName] then
+        MysticExtendedDB.Settings[realmName] = {}
+    end
+
+    ME.db = MysticExtendedDB.Settings[realmName]
+    ME.EnchantSaveLists = MysticExtendedDB.EnchantSaveLists
+
+    for _,v in ipairs(DefaultSettings) do
+        if ME.db[v.TableName] == nil then
+            if #v > 1 then
+                ME.db[v.TableName] = {}
+                for _, n in ipairs(v) do
+                    tinsert(ME.db[v.TableName], n)
+                end
+            else
+                ME.db[v.TableName] = v[1]
+            end
+        end
+
+        if v.CheckBox then
+            _G[v.CheckBox]:SetChecked(ME.db[v.TableName])
+        end
+        if v.Text then
+            _G[v.Text]:SetText(ME.db[v.TableName])
+        end
+    end
+
+    for _, v in ipairs(ME.EnchantSaveLists) do
         if v[realmName] == nil then
             v[realmName] = { ["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false };
-        end
-        --clean up for old settings
-        if type(v.enableDisenchant) == "boolean" then
-            v.enableDisenchant = nil;
-        end
-        if type(v.enableRoll) == "boolean" then
-            v.enableRoll = nil;
-        end
-        if type(v.ignoreList) == "boolean" then
-            v.enableRoll = nil;
         end
     end
 
@@ -810,34 +878,6 @@ function ME:OnInitialize()
     SLASH_MYSTICEXTENDED2 = "/me";
     SlashCmdList["MYSTICEXTENDED"] = function(msg)
         MysticExtended_SlashCommand(msg);
-    end
-
-    if ME.db.Version == nil or ME.db.Version < 110 then
-        ME.db.Version = 110;
-        local data = {};
-        for _, v in pairs(ME.db.EnchantSaveLists) do
-            tinsert(data, v);
-        end
-        ME.db.EnchantSaveLists = {};
-        for _, v in ipairs(data) do
-            tinsert(ME.db.EnchantSaveLists, v);
-        end
-        ME.db.currentSelectedList = 1;
-    end
-
-    if ME.db.Version == nil or ME.db.Version < 130 then
-        ME.db.Version = 130
-        local data = {[1] = {},[2] = {}, [3] = {}}
-        for _,v in ipairs(ME.db.QualityList) do
-           tinsert(data[1],v[2])
-           tinsert(data[2],true)
-           tinsert(data[3],v[4])
-        end
-        ME.db.QualityList = {}
-        for i, v in ipairs(data) do
-            ME.db.QualityList[i] = v
-        end
-
     end
 
     ME:RegisterComm("MysticExtendedEnchantList")
@@ -924,33 +964,8 @@ end
 
 --Loads when addon is loaded
 function ME:OnEnable()
-    MysticExtended_ListEnable();
-    MysticExtended_DropDownInitialize();
-    if ME.db.AllowShareEnchantListInCombat then
-        MysticExtendedOptions_EnableShareCombat:SetChecked(true);
-    else
-        MysticExtendedOptions_EnableShareCombat:SetChecked(false);
-    end
-
-    if ME.db.AllowShareEnchantList then
-        MysticExtendedOptions_EnableShare:SetChecked(true);
-    else
-        MysticExtendedOptions_EnableShare:SetChecked(false);
-    end
-
-    if not ME.db.UnknownAutoExtract then
-        ME.db.UnknownAutoExtract = false
-    end
-
-    if ME.db.REFORGE_RETRY_DELAY == nil then
-        ME.db.REFORGE_RETRY_DELAY = 5;
-    end
-
-    if ME.db.ButtonEnable then
-        MysticExtendedOptions_FloatSetting:SetChecked(true);
-    else
-        MysticExtendedOptions_FloatSetting:SetChecked(false);
-    end
+    MysticExtended_ListEnable()
+    MysticExtended_DropDownInitialize()
 
     if ME.db.AutoMysticScrollBloodforge then
         --MysticExtendedOptions_AutoMysticScrollBloodforge:SetChecked(true);
@@ -958,32 +973,6 @@ function ME:OnEnable()
     else
         --MysticExtendedOptions_AutoMysticScrollBloodforge:SetChecked(false);
     end
-
-    if ME.db.ChatMSG == nil or ME.db.ChatMSG then
-        MysticExtendedOptions_ChatMSG:SetChecked(true);
-        ME.db.ChatMSG = true;
-    else
-        MysticExtendedOptions_ChatMSG:SetChecked(false);
-    end
-
-    if ME.db.ShowUnknown then
-        MysticExtendedExtract_ShowUnknown:SetChecked(true);
-        ME.db.ShowUnknown = true;
-    else
-        MysticExtendedExtract_ShowUnknown:SetChecked(false);
-    end
-
-    if ME.db.ExtractWarn == nil or ME.db.ExtractWarn then
-        MysticExtendedOptions_ExtractWarning:SetChecked(true);
-        ME.db.ExtractWarn = true;
-    else
-        MysticExtendedOptions_ExtractWarning:SetChecked(false);
-    end
-
-    if not ME.db.lastXpLevel then ME.db.lastXpLevel = {} end
-    if not ME.db.lastXpLevel[realmName] then ME.db.lastXpLevel[realmName] = 0 end
-    if not ME.db.lastItemXpLevel then ME.db.lastItemXpLevel = {} end
-    if not ME.db.lastItemXpLevel[realmName] then ME.db.lastItemXpLevel[realmName] = 0 end
 
     if ME.db.ShowInCity and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
         MysticExtendedOptions_FloatCitySetting:SetChecked(true);
@@ -1017,6 +1006,8 @@ function ME:OnEnable()
     ME:RegisterEvent("GUILDBANKFRAME_OPENED", guildBankFrameOpened);
     ME:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST", MysticExtended_OnEvent);
 
+    ME:CalculateKnowEnchants()
+
     if not ME.db.minimap then
         ME.db.minimap = {hide = false}
     end
@@ -1031,16 +1022,12 @@ function ME:OnEnable()
         MysticExtendedOptions_MapIcon:SetChecked(false);
     end
 
-    if not ME.db.MinGold then
-        ME.db.MinGold = 20000
-    end
-
     if select(4,GetAddOnInfo('Bagnon_GuildBank')) then bagnonGuildbank = true end
     if select(4,GetAddOnInfo('MysticMaestro')) then
         mysticMastro = true
         MysticExtended_MoneyFrame:Show()
     end
-    MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,MysticExtendedDB.MinGold)
+    MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,ME.db.MinGold)
 end
 
 -- All credit for this func goes to Tekkub and his picoGuild!
@@ -1131,3 +1118,7 @@ function ME:MiniMapMenuRegister(self)
 		'dontHook', true
 	)
 end
+
+
+
+

@@ -37,7 +37,7 @@ end
 
 function ME:MenuInitialize()
         local info;
-        for k,v in ipairs(ME.db.EnchantSaveLists) do
+        for k,v in ipairs(ME.EnchantSaveLists) do
                     info = {
                         text = v.Name;
                         func = function() setCurrentSelectedList() end;
@@ -59,10 +59,10 @@ StaticPopupDialogs["MYSTICEXTENDED_ADDLIST"] = {
     hasEditBox = true,
     OnAccept = function (self, data, data2)
         local text = self.editBox:GetText()
-        ME.db.EnchantSaveLists[#ME.db.EnchantSaveLists + 1] = {["Name"] = text, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}; }
+        ME.EnchantSaveLists[#ME.EnchantSaveLists + 1] = {["Name"] = text, [realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false}; }
         UIDropDownMenu_Initialize(MysticExtended_ListDropDown, ME.MenuInitialize);
-        UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,#ME.db.EnchantSaveLists);
-        ME.db.currentSelectedList = #ME.db.EnchantSaveLists;
+        UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,#ME.EnchantSaveLists);
+        ME.db.currentSelectedList = #ME.EnchantSaveLists;
     MysticExtended_ScrollFrameUpdate();
     end,
     timeout = 0,
@@ -78,13 +78,13 @@ StaticPopupDialogs["MYSTICEXTENDED_EDITLISTNAME"] = {
     button2 = "Cancel",
     hasEditBox = true,
     OnShow = function(self)
-		self.editBox:SetText(ME.db.EnchantSaveLists[ME.db.currentSelectedList].Name)
+		self.editBox:SetText(ME.EnchantSaveLists[ME.db.currentSelectedList].Name)
 		self:SetFrameStrata("TOOLTIP");
 	end,
     OnAccept = function (self, data, data2)
         local text = self.editBox:GetText()
         if text ~= "" then
-            ME.db.EnchantSaveLists[ME.db.currentSelectedList].Name = text;
+            ME.EnchantSaveLists[ME.db.currentSelectedList].Name = text;
             UIDropDownMenu_Initialize(MysticExtended_ListDropDown, ME.MenuInitialize);
             UIDropDownMenu_SetText(MysticExtended_ListDropDown, text)
             MysticExtended_ScrollFrameUpdate();
@@ -102,7 +102,7 @@ StaticPopupDialogs["MYSTICEXTENDED_DELETELIST"] = {
     button1 = "Confirm",
     button2 = "Cancel",
     OnAccept = function (self, data, data2)
-        tremove(ME.db.EnchantSaveLists, ME.db.currentSelectedList);
+        tremove(ME.EnchantSaveLists, ME.db.currentSelectedList);
         UIDropDownMenu_Initialize(MysticExtended_ListDropDown, ME.MenuInitialize);
         UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,1);
         ME.db.currentSelectedList = 1;
@@ -118,10 +118,10 @@ StaticPopupDialogs["MYSTICEXTENDED_DELETELIST"] = {
 local function exportString()
     MysticExtended_OptionsMenu:Close();
     local data = {};
-    for i,v in ipairs(ME.db.EnchantSaveLists[ME.db.currentSelectedList]) do
+    for i,v in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
         tinsert(data,{v[1]});
     end
-    data["Name"] = ME.db.EnchantSaveLists[ME.db.currentSelectedList]["Name"];
+    data["Name"] = ME.EnchantSaveLists[ME.db.currentSelectedList]["Name"];
     Internal_CopyToClipboard("MEXT:"..ME:Serialize(data));
 end
 
@@ -134,7 +134,7 @@ function ME:ListFrameMenuRegister(self)
             if level == 1 then
                 MysticExtended_OptionsMenu:AddLine(
                     'text', "Send Current List",
-                    'func', function() StaticPopup_Show("MYSTICEXTENDED_SEND_ENCHANTLIST",ME.db.EnchantSaveLists[ME.db.currentSelectedList].Name) end,
+                    'func', function() StaticPopup_Show("MYSTICEXTENDED_SEND_ENCHANTLIST",ME.EnchantSaveLists[ME.db.currentSelectedList].Name) end,
                     'notCheckable', true
                 )
                 MysticExtended_OptionsMenu:AddLine(
@@ -224,8 +224,8 @@ end
 ---------------------ScrollFrame----------------------------------
 --Check to see if the enchant is allreay on the list
 local function GetSavedEnchant(id)
-    for n in ipairs(ME.db.EnchantSaveLists[ME.db.currentSelectedList]) do
-        if ME.db.EnchantSaveLists[ME.db.currentSelectedList][n][1] == id then
+    for n in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
+        if ME.EnchantSaveLists[ME.db.currentSelectedList][n][1] == id then
             return n
         end
     end
@@ -245,8 +245,8 @@ local scrollFrame = CreateFrame("Frame", "MysticExtended_ScrollFrame", MysticExt
     });
 
 function MysticExtended_ScrollFrameUpdate()
-    showtable = {Name = ME.db.EnchantSaveLists[ME.db.currentSelectedList].Name, MenuID = ME.db.EnchantSaveLists[ME.db.currentSelectedList].MenuID};
-    for _,v in ipairs(ME.db.EnchantSaveLists[ME.db.currentSelectedList]) do
+    showtable = {Name = ME.EnchantSaveLists[ME.db.currentSelectedList].Name, MenuID = ME.EnchantSaveLists[ME.db.currentSelectedList].MenuID};
+    for _,v in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
         if MYSTIC_ENCHANTS[v[1]] then
             tinsert(showtable,v)
         end
@@ -294,8 +294,8 @@ local rows = setmetatable({}, { __index = function(t, i)
         local item = tonumber(row.enchantID)
         local itemNum = GetSavedEnchant(item)
         if button == "RightButton" then
-            if ME.db.EnchantSaveLists[ME.db.currentSelectedList][itemNum] then
-                tremove(ME.db.EnchantSaveLists[ME.db.currentSelectedList],itemNum)
+            if ME.EnchantSaveLists[ME.db.currentSelectedList][itemNum] then
+                tremove(ME.EnchantSaveLists[ME.db.currentSelectedList],itemNum)
             end
             MysticExtended_ScrollFrameUpdate()    
         elseif button == "LeftButton" then
@@ -339,7 +339,7 @@ hooksecurefunc("ChatEdit_InsertLink", function(link)
                 id = MYSTIC_ENCHANT_SPELLS[id]
             end
                 if not GetSavedEnchant(id) then
-                    tinsert(ME.db.EnchantSaveLists[ME.db.currentSelectedList],{id})
+                    tinsert(ME.EnchantSaveLists[ME.db.currentSelectedList],{id})
                     MysticExtended_ScrollFrameUpdate();
                 end
         return true
