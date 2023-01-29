@@ -10,7 +10,7 @@ local playerName = UnitName("player");
 local realmName = GetRealmName();
 local SpamFilter = {}
 local SpamFilterTime = 10
-MysticExtended_OptionsMenu = AceLibrary("Dewdrop-2.0");
+local dewdrop = AceLibrary("Dewdrop-2.0");
 
 -- Colours stored for code readability
 local GREY = "|cff999999";
@@ -135,7 +135,7 @@ StaticPopupDialogs["MYSTICEXTENDED_SEND_ENCHANTLIST"] = {
 	button1 = "Send",
 	button2 = "Cancel",
 	OnShow = function(self)
-		MysticExtended_OptionsMenu:Close();
+		dewdrop:Close();
 		self:SetFrameStrata("TOOLTIP");
 	end,
 	OnAccept = function()
@@ -167,7 +167,7 @@ StaticPopupDialogs["MYSTICEXTENDED_IMPORT_ENCHANTLIST"] = {
 	button1 = "Import",
 	button2 = "Cancel",
 	OnShow = function(self)
-		MysticExtended_OptionsMenu:Close();
+		dewdrop:Close();
 		self:SetFrameStrata("TOOLTIP");
 	end,
 	OnAccept = function()

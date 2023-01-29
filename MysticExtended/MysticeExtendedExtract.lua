@@ -1,5 +1,5 @@
 local ME = LibStub("AceAddon-3.0"):GetAddon("MysticExtended")
-MysticExtended_ExtractMenu = AceLibrary("Dewdrop-2.0");
+local dewdrop = AceLibrary("Dewdrop-2.0");
 local mainframe = CreateFrame("FRAME", "MysticExtendedExtractFrame", UIParent,"UIPanelDialogTemplate")
     mainframe:SetSize(460,508);
     mainframe:SetPoint("CENTER",0,0);
@@ -14,12 +14,13 @@ local mainframe = CreateFrame("FRAME", "MysticExtendedExtractFrame", UIParent,"U
         if not MysticEnchantingFrame:IsVisible() then
             MysticEnchantingFrame:UnregisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
         end
-        MysticExtendedExtractCountText:SetText(string.format("Mystic Extracts: |cffFFFFFF%i|r", GetItemCount(98463)));
-
+        ME:CalculateKnowEnchants()
     end);
     mainframe:SetScript("OnHide", function()
-        ME:UnregisterEvent("BAG_UPDATE");
-        MysticEnchantingFrame:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
+        ME:UnregisterEvent("BAG_UPDATE")
+        if not ME.AutoRolling then
+            MysticEnchantingFrame:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST")
+        end
     end);
     mainframe.TitleText = mainframe:CreateFontString();
     mainframe.TitleText:SetFont("Fonts\\FRIZQT__.TTF", 12);
@@ -83,11 +84,11 @@ local extractMenu = CreateFrame("Button", "MysticExtended_ExtractInterface_Quali
     extractMenu:SetText("Quality");
     extractMenu:RegisterForClicks("LeftButtonDown");
     extractMenu:SetScript("OnClick", function(self)
-        if MysticExtended_ExtractMenu:IsOpen() then
-            MysticExtended_ExtractMenu:Close();
+        if dewdrop:IsOpen() then
+            dewdrop:Close();
         else
             ME:ExtractMenuRegister(self);
-            MysticExtended_OptionsMenu:Open(this);
+            dewdrop:Open(this);
         end
     end);
 
@@ -116,7 +117,7 @@ local function QualitySet(listNum,quality)
 end
 
 function ME:ExtractMenuRegister(self)
-    MysticExtended_ExtractMenu:Register(self,
+    dewdrop:Register(self,
         'point', function(parent)
             return "TOP", "BOTTOM"
         end,
@@ -124,7 +125,7 @@ function ME:ExtractMenuRegister(self)
             if level == 1 then
                 for k, v in ipairs(ME.QualityList) do
                     local qualityColor = select(4, GetItemQualityColor(v[2]))
-                    MysticExtended_ExtractMenu:AddLine(
+                    dewdrop:AddLine(
                         'text', qualityColor .. v[1],
                         'arg1', 3,
                         'arg2', k,
@@ -132,12 +133,12 @@ function ME:ExtractMenuRegister(self)
                         'checked', ME.db.QualityList[3][k]
                     )
                 end
-                MysticExtended_ExtractMenu:AddLine(
+                dewdrop:AddLine(
                     'text', "Close Menu",
                     'textR', 0,
                     'textG', 1,
                     'textB', 1,
-                    'func', function() MysticExtended_ExtractMenu:Close() end,
+                    'closeWhenClicked', true,
                     'notCheckable', true
                 )
             end
@@ -272,15 +273,18 @@ StaticPopupDialogs["MYSTICEXTENDED_CONFIRM_EXTRACT"] = {
 	hideOnEscape = 1
 }
 
-    mainframe.commenbtn = CreateFrame("Button", nil, MysticExtendedExtractFrame)
-	mainframe.commenbtn:SetPoint("TOP", 100, -40)
-	mainframe.commenbtn:SetSize(110,20)
-    mainframe.commenbtn.Lable = mainframe.commenbtn:CreateFontString(nil , "BORDER", "GameFontNormal")
-	mainframe.commenbtn.Lable:SetJustifyH("LEFT")
-	mainframe.commenbtn.Lable:SetPoint("LEFT", 0, 0);
-	mainframe.commenbtn:SetScript("OnShow", function() mainframe.commenbtn.Lable:SetText("Number of Enchants") end)
-    mainframe.commenbtn:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+    mainframe.knownCount = CreateFrame("Button", nil, MysticExtendedExtractFrame)
+	mainframe.knownCount:SetPoint("TOP", 110, -40)
+	mainframe.knownCount:SetSize(190,20)
+    mainframe.knownCount.Lable = mainframe.knownCount:CreateFontString(nil , "BORDER", "GameFontNormal")
+	mainframe.knownCount.Lable:SetJustifyH("LEFT")
+	mainframe.knownCount.Lable:SetPoint("LEFT", 0, 0);
+	mainframe.knownCount:SetScript("OnShow", function() mainframe.knownCount.Lable:SetText("Known Enchants: |cffffffff".. ME.db.KnownEnchantNumbers.Total.Known.."/"..ME.db.KnownEnchantNumbers.Total.Total) end)
+    mainframe.knownCount:SetScript("OnEnter", function(self) ME:EnchantCountTooltip(self) end)
+    mainframe.knownCount:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    function ME:EnchantCountTooltip(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine(select(4, GetItemQualityColor(2)).."Commen Enchants")
         GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Commen.Known.."/"..ME.db.KnownEnchantNumbers.Commen.Total)
         GameTooltip:AddLine("|cffffffffUnknown: "..ME.db.KnownEnchantNumbers.Commen.Unknown)
@@ -297,5 +301,4 @@ StaticPopupDialogs["MYSTICEXTENDED_CONFIRM_EXTRACT"] = {
         GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Legendary.Known.."/"..ME.db.KnownEnchantNumbers.Legendary.Total)
         GameTooltip:AddLine("|cffffffffUnknown: "..ME.db.KnownEnchantNumbers.Legendary.Unknown)
         GameTooltip:Show()
-        end)
-    mainframe.commenbtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    end

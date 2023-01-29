@@ -1,9 +1,11 @@
 local ME = LibStub("AceAddon-3.0"):GetAddon("MysticExtended")
+local dewdrop = AceLibrary("Dewdrop-2.0");
+
 function ME:OptionsToggle()
     if InterfaceOptionsFrame:IsVisible() then
 		InterfaceOptionsFrame:Hide();
 	else
-		MysticExtended_OptionsMenu:Close();
+		dewdrop:Close();
 		Collections:Hide();
 		InterfaceOptionsFrame_OpenToCategory("MysticExtended");
 	end
@@ -55,7 +57,6 @@ local function DeleteIdButton()
 end
 
 --Creates the options frame and all its assets
-InterfaceOptionsFrame:SetWidth(850)
 local mainframe = {};
 		mainframe = CreateFrame("FRAME", "MysticExtendedOptionsFrame", InterfaceOptionsFrame, nil);
     	local fstring = mainframe:CreateFontString(mainframe, "OVERLAY", "GameFontNormal");
@@ -63,6 +64,10 @@ local mainframe = {};
 		fstring:SetPoint("TOPLEFT", 15, -15)
 		mainframe.name = "MysticExtended";
 		InterfaceOptions_AddCategory(mainframe);
+		mainframe:SetScript("OnShow",function()
+			InterfaceOptionsFrame:SetWidth(900)
+			MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,ME.db.MinGold)
+		end)
 
 local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExtendedOptionsFrame, "UIDropDownMenuTemplate");
 	menuDrop:SetPoint("TOPLEFT", 0, -60);
@@ -130,13 +135,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	enableShare.Lable:SetJustifyH("LEFT");
 	enableShare.Lable:SetPoint("LEFT", 30, 0);
 	enableShare.Lable:SetText("Enable Enchant List Shareing");
-	enableShare:SetScript("OnClick", function() 
-		if ME.db.AllowShareEnchantList then
-			ME.db.AllowShareEnchantList = false
-		else
-			ME.db.AllowShareEnchantList = true
-		end
-	end);
+	enableShare:SetScript("OnClick", function() ME.db.AllowShareEnchantList = not ME.db.AllowShareEnchantList end);
 
 	local enableInCombat = CreateFrame("CheckButton", "MysticExtendedOptions_EnableShareCombat", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
 	enableInCombat:SetPoint("TOPLEFT", 15, -275);
@@ -144,13 +143,7 @@ local menuDrop = CreateFrame("Button", "MysticExtendedOptions_Menu", MysticExten
 	enableInCombat.Lable:SetJustifyH("LEFT");
 	enableInCombat.Lable:SetPoint("LEFT", 30, 0);
 	enableInCombat.Lable:SetText("Auto Reject Enchant List\nShareing In Combat");
-	enableInCombat:SetScript("OnClick", function()
-		if ME.db.AllowShareEnchantListInCombat then
-			ME.db.AllowShareEnchantListInCombat = false
-		else
-			ME.db.AllowShareEnchantListInCombat = true
-		end
-	end);
+	enableInCombat:SetScript("OnClick", function() ME.db.AllowShareEnchantListInCombat = not ME.db.AllowShareEnchantListInCombat end);
 
 --[[ local trinketConvert = CreateFrame("CheckButton", "MysticExtendedOptions_AutoMysticScrollBloodforge", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
 	trinketConvert:SetPoint("TOPLEFT", 15, -310);
@@ -174,13 +167,7 @@ local chatmsg = CreateFrame("CheckButton", "MysticExtendedOptions_ChatMSG", Myst
 	chatmsg.Lable:SetJustifyH("LEFT");
 	chatmsg.Lable:SetPoint("LEFT", 30, 0);
 	chatmsg.Lable:SetText("Show Enchant\nLearned Messages");
-	chatmsg:SetScript("OnClick", function()
-		if ME.db.ChatMSG then
-			ME.db.ChatMSG = false
-		else
-			ME.db.ChatMSG = true
-		end
-	end);
+	chatmsg:SetScript("OnClick", function() ME.db.ChatMSG = not ME.db.ChatMSG end);
 
 local extractwarn = CreateFrame("CheckButton", "MysticExtendedOptions_ExtractWarning", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
 	extractwarn:SetPoint("TOPLEFT", 15, -345);
@@ -188,14 +175,8 @@ local extractwarn = CreateFrame("CheckButton", "MysticExtendedOptions_ExtractWar
 	extractwarn.Lable:SetJustifyH("LEFT");
 	extractwarn.Lable:SetPoint("LEFT", 30, 0);
 	extractwarn.Lable:SetText("Toggle Extract Warning On\nExtract Interface");
-	extractwarn:SetScript("OnClick", function()
-		if ME.db.ExtractWarn then
-			ME.db.ExtractWarn = false
-		else
-			ME.db.ExtractWarn = true
-		end
-	end);
-
+	extractwarn:SetScript("OnClick", function() ME.db.ExtractWarn = not ME.db.ExtractWarn end);
+		
 local mapicon = CreateFrame("CheckButton", "MysticExtendedOptions_MapIcon", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
 	mapicon:SetPoint("TOPLEFT", 15, -380)
 	mapicon.Lable = mapicon:CreateFontString(nil , "BORDER", "GameFontNormal")
@@ -233,3 +214,15 @@ local mapicon = CreateFrame("CheckButton", "MysticExtendedOptions_MapIcon", Myst
 				ME.db.minExtractNum = tonumber(minExtract:GetText())
 			end
 		end)
+
+local rollExtract = CreateFrame("CheckButton", "MysticExtendedOptions_DefaultToExtract", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	rollExtract:SetPoint("TOPRIGHT", -270, -170);
+	rollExtract.Lable = rollExtract:CreateFontString(nil , "BORDER", "GameFontNormal");
+	rollExtract.Lable:SetJustifyH("LEFT");
+	rollExtract.Lable:SetPoint("LEFT", 30, 0);
+	rollExtract.Lable:SetText("Enable Roll For Extracts By Default");
+	rollExtract:SetScript("OnClick", function() 
+		ME.db.DefaultToExtract = not ME.db.DefaultToExtract
+		ME.RollExtracts = ME.db.DefaultToExtract
+	end);
+	

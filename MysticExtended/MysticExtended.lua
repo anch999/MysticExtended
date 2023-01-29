@@ -1,7 +1,7 @@
 MysticExtended = LibStub("AceAddon-3.0"):NewAddon("MysticExtended", "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceSerializer-3.0", "AceComm-3.0")
 local ME = LibStub("AceAddon-3.0"):GetAddon("MysticExtended")
 local icon = LibStub('LibDBIcon-1.0');
-local addonName, addonTable = ...
+local addonName = ...
 MYSTICEXTENDED_MINIMAP = LibStub:GetLibrary('LibDataBroker-1.1'):NewDataObject(addonName, {
     type = 'data source',
     text = "MysticExtended",
@@ -9,15 +9,12 @@ MYSTICEXTENDED_MINIMAP = LibStub:GetLibrary('LibDataBroker-1.1'):NewDataObject(a
   })
 
 local minimap = MYSTICEXTENDED_MINIMAP
-MysticExtended_DewdropMenu = AceLibrary("Dewdrop-2.0");
-MysticExtended_MiniMapMenu = AceLibrary("Dewdrop-2.0");
+local dewdrop = AceLibrary("Dewdrop-2.0");
 local realmName = GetRealmName();
 --Set Savedvariables defaults
-local RollExtracts = false;
 local bagnonGuildbank = false;
 local mysticMastro = false;
 MYSTICEXTENDED_ITEMSET = false;
-local AutoOn = false;
 local reFound = false;
 
 local DefaultSettings = {
@@ -41,8 +38,16 @@ local DefaultSettings = {
     { TableName = "AllowShareEnchantListInCombat", true, CheckBox = "MysticExtendedOptions_EnableShareCombat" },
     { TableName = "AllowShareEnchantList", false, CheckBox = "MysticExtendedOptions_EnableShare" },
     { TableName = "ExtractWarn", true, CheckBox = "MysticExtendedOptions_ExtractWarning" },
+    { TableName = "DefaultToExtract", false, CheckBox = "MysticExtendedOptions_DefaultToExtract" },
     { TableName = "lastXpLevel", 0 },
     { TableName = "nextLevel", 0 },
+    { TableName = "KnownEnchantNumbers",
+        Commen = { Total = 0, Known = 0, Unknown = 0 },
+        Rare = { Total = 0, Known = 0, Unknown = 0 },
+        Epic = { Total = 0, Known = 0, Unknown = 0 },
+        Legendary = { Total = 0, Known = 0, Unknown = 0 },
+        Total = {Total = 0, Known = 0}
+    },
 }
 
 ME.QualityList = {
@@ -99,7 +104,7 @@ end
 
 --returns if the item needs to be reforged or not
 function ME:RollCheck(bagID, slotID, extractoff)
-    if RollExtracts then return true end
+    if ME.RollExtracts then return true end
     local enchantID = GetREInSlot(bagID, slotID)
     if not enchantID then return true end
     local extractCount = GetItemCount(98463)
@@ -163,7 +168,7 @@ function ME:StopAutoRoll()
     MysticExtendedCountDownText:SetText("");
     MysticExtendedCountDownFrame:Hide();
     MysticExtendedFrame_Menu_Icon_Breathing:Hide();
-    AutoOn = false;
+    ME.AutoRolling = false;
     reFound = false;
 end
 
@@ -185,7 +190,8 @@ function ME:CalculateKnowEnchants()
         Commen = { Total = 0, Known = 0, Unknown = 0 },
         Rare = { Total = 0, Known = 0, Unknown = 0 },
         Epic = { Total = 0, Known = 0, Unknown = 0 },
-        Legendary = { Total = 0, Known = 0, Unknown = 0 }
+        Legendary = { Total = 0, Known = 0, Unknown = 0 },
+        Total = {Total = 0, Known = 0}
     }
 
     for _, v in pairs(MYSTIC_ENCHANTS) do
@@ -199,7 +205,7 @@ function ME:CalculateKnowEnchants()
           elseif v.quality == 5 then
             known.Legendary.Total = known.Legendary.Total + 1
           end
-          
+
           if IsReforgeEnchantmentKnown(v.enchantID) then
              if v.quality == 2 then
                 known.Commen.Known = known.Commen.Known + 1
@@ -210,15 +216,18 @@ function ME:CalculateKnowEnchants()
              elseif v.quality == 5 then
                 known.Legendary.Known = known.Legendary.Known + 1
              end
+             known.Total.Known = known.Total.Known + 1
           end
+          known.Total.Total = known.Total.Total + 1
        end
     end
     known.Commen.Unknown = known.Commen.Total - known.Commen.Known
     known.Rare.Unknown = known.Rare.Total - known.Rare.Known
     known.Epic.Unknown = known.Epic.Total - known.Epic.Known
-    known.Legendary.Unknown = known.Legendary.Total - known.Legendary.Known
+    known.Legendary.Unknown = known.Legendary.Total - known.Legendary.Known 
 
     ME.db.KnownEnchantNumbers = known
+    MysticExtendedExtractFrame.knownCount.Lable:SetText("Known Enchants: |cffffffff".. ME.db.KnownEnchantNumbers.Total.Known.."/"..ME.db.KnownEnchantNumbers.Total.Total)
 end
 
 --[[
@@ -250,7 +259,8 @@ function MysticExtended_OnEvent(event, arg1, arg2, arg3)
                 DEFAULT_CHAT_FRAME:AddMessage(itemLink .. " Has been added to your collection")
             end
             MysticExtendedExtractCountText:SetText(string.format("Mystic Extracts: |cffFFFFFF%i|r", GetItemCount(98463)))
-        elseif AutoOn and arg1 == "ASCENSION_REFORGE_PROGRESS_UPDATE" then
+            ME:CalculateKnowEnchants()
+        elseif ME.AutoRolling and arg1 == "ASCENSION_REFORGE_PROGRESS_UPDATE" then
             --Shows how many more enchants to level up your atlar
             local xpGained = arg2 - ME.db.lastXpLevel
             ME.db.nextLevel = math.floor((GetRequiredRollsForLevel(arg3) - arg2) / xpGained) + 1
@@ -364,7 +374,7 @@ function ME:RollEnchant()
     MysticExtendedCountDownFrame:Show()
     MysticExtendedCountDownText:SetText("You Have " .. GetItemCount(98462) .. " Runes Left")
     -- check if rolling hasnt been stoped or we have enough runes
-    if AutoOn and GetItemCount(98462) > 0 and GetUnitSpeed("player") == 0 and reforge and not reFound then
+    if ME.AutoRolling and GetItemCount(98462) > 0 and GetUnitSpeed("player") == 0 and reforge and not reFound then
         ME:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", MysticExtended_OnEvent)
         ME:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED", MysticExtended_OnEvent)
         --starts 3sec repeat timer for when there is no atlar
@@ -385,15 +395,15 @@ function ME:RollEnchant()
 end
 
 --start rolling make all text changes 
-local function MysticExtended_StartAutoRoll()
-    if AutoOn then
+local function startAutoRoll()
+    if ME.AutoRolling then
         ME:StopAutoRoll();
     else
         if not MysticEnchantingFrame:IsVisible() then
             MysticEnchantingFrame:UnregisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
         end
         if IsMounted() then Dismount() end
-        AutoOn = true;
+        ME.AutoRolling = true;
         MysticExtendedFrame_Menu_Icon_Breathing:Show();
         MysticExtended_ListFrameReforgeButton:SetText("Auto Reforging");
         MysticExtendedFrame_Menu.Text:SetText("|cffffffffAuto\nForging");
@@ -403,19 +413,11 @@ local function MysticExtended_StartAutoRoll()
 end
 
 local function QualityEnable(enable)
-    if ME.db[enable] then
-        ME.db[enable] = false;
-    else
-        ME.db[enable] = true;
-    end
+    ME.db[enable] = not ME.db[enable]
 end
 
 local function QualitySet(listNum,quality)
-    if ME.db.QualityList[listNum][quality] then
-        ME.db.QualityList[listNum][quality] = false;
-    else
-        ME.db.QualityList[listNum][quality] = true;
-    end
+    ME.db.QualityList[listNum][quality] = not ME.db.QualityList[listNum][quality]
 end
 
 local function EnableClick(list,cat,cat2)
@@ -469,186 +471,198 @@ function ME:ButtonEnable(button)
     end
 end
 
-local function RollExtractsEnable()
-    if RollExtracts then
-        RollExtracts = false;
-    else
-        RollExtracts = true;
-    end
-end
-
 local function realmCheck(table)
     if table[realmName] then return end
     table[realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};    
 end
 
+local function rollMenuLevel1(value)
+    dewdrop:AddLine(
+        'text', "Select Lists to Roll",
+        'hasArrow', true,
+        'value', ME.EnchantSaveLists,
+        'notCheckable', true
+    )
+    dewdrop:AddLine(
+        'text', "Auto Extract Unknown",
+        'hasArrow', true,
+        'value', "extractUnknown",
+        'notCheckable', true
+    )
+    if mysticMastro then
+        dewdrop:AddLine(
+            'text', "Reforge Based On Auction Price",
+            'hasArrow', true,
+            'value', "mysticMastro",
+            'notCheckable', true
+        )
+    end
+    dewdrop:AddLine(
+        'text', "Roll Quality",
+        'hasArrow', true,
+        'value', "RollQuality",
+        'notCheckable', true
+    )
+    dewdrop:AddLine(
+        'text', "Roll For Extracts",
+        'value', "RollExtracts",
+        'hasArrow', true,
+        'notCheckable', true
+    )
+    dewdrop:AddLine(
+        'text', "Close Menu",
+        'textR', 0,
+        'textG', 1,
+        'textB', 1,
+        'closeWhenClicked', true,
+        'notCheckable', true
+    )
+end
+
+local function rollMenuLevel2(value)
+    if value == "extractUnknown" then
+        dewdrop:AddLine(
+                'text', "Enable",
+                'func', QualityEnable,
+                'arg1', "UnknownAutoExtract",
+                'checked', ME.db.UnknownAutoExtract
+            )
+        for k,v in ipairs(ME.QualityList) do
+            local qualityColor = select(4,GetItemQualityColor(v[2]))
+            dewdrop:AddLine(
+                'text', qualityColor..v[1],
+                'arg1', 2,
+                'arg2', k,
+                'func', QualitySet,
+                'checked', ME.db.QualityList[2][k]
+            )
+        end
+    elseif value == "mysticMastro" then
+        dewdrop:AddLine(
+                'text', "Enable",
+                'func', QualityEnable,
+                'arg1', "mysticMastro",
+                'checked', ME.db.mysticMastro
+            )
+    elseif value == "RollQuality" then
+        dewdrop:AddLine(
+                'text', "Enable",
+                'func', QualityEnable,
+                'arg1', "RollByQuality",
+                'checked', ME.db.RollByQuality
+            )
+        for k,v in ipairs(ME.QualityList) do
+            local qualityColor = select(4,GetItemQualityColor(v[2]))
+            dewdrop:AddLine(
+                'text', qualityColor..v[1],
+                'arg1', 1,
+                'arg2', k,
+                'func', QualitySet,
+                'checked', ME.db.QualityList[1][k]
+            )
+        end
+    elseif value == ME.EnchantSaveLists then
+        for i,v in ipairs(value) do
+            realmCheck(v);
+            dewdrop:AddLine(
+                'text', v.Name,
+                'hasArrow', true,
+                'value', {v,i},
+                'notCheckable', true
+            )
+        end
+    elseif value == "RollExtracts" then
+        dewdrop:AddLine(
+                'text', "Enable",
+                'checked', ME.RollExtracts,
+                'func', function() ME.RollExtracts = not ME.RollExtracts end
+            )
+        dewdrop:AddLine(
+            'text', "This option is for when you want to roll all your runes",
+            'notCheckable', true
+        )
+        dewdrop:AddLine(
+            'text', "to genarate mystic extracts enabling this will roll with",
+            'notCheckable', true
+        )
+        dewdrop:AddLine(
+            'text', "out stoping on any enchants till you run out of runes.",
+            'notCheckable', true
+        )
+        dewdrop:AddLine(
+            'text', "Either put an item in the enchanting frame or have the",
+            'notCheckable', true
+        )
+        dewdrop:AddLine(
+            'text', "item be the first item in your inventory.",
+            'notCheckable', true
+        )
+    end
+    dewdrop:AddLine(
+        'text', "Close Menu",
+        'textR', 0,
+        'textG', 1,
+        'textB', 1,
+        'closeWhenClicked', true,
+        'notCheckable', true
+    )
+end
+
+local function rollMenuLevel3(value)
+    dewdrop:AddLine(
+        'text', "Enable List",
+        'arg1', value[2],
+        'arg2', "enableRoll",
+        'arg3', "enableRollExt",
+        'func', EnableClick,
+        'checked', value[1][realmName]["enableRoll"]
+    )
+    dewdrop:AddLine(
+        'text', "Enable Only When You Have Extracts",
+        'arg1', value[2],
+        'arg2', "enableRollExt",
+        'arg3', "enableRoll",
+        'func', EnableClick,
+        'checked', value[1][realmName]["enableRollExt"]
+    )
+    dewdrop:AddLine(
+        'text', "Disenchant to Collection and remove from list",
+        'arg1', value[2],
+        'arg2', "enableDisenchant",
+        'arg3', "ignoreList",
+        'func', EnableClick,
+        'checked', value[1][realmName]["enableDisenchant"]
+    )
+    dewdrop:AddLine(
+        'text', "ReRoll items on this list when found",
+        'arg1', value[2],
+        'arg2', "ignoreList",
+        'arg3', "enableDisenchant",
+        'func', EnableClick,
+        'checked', value[1][realmName]["ignoreList"]
+    )
+    dewdrop:AddLine(
+        'text', "Close Menu",
+        'textR', 0,
+        'textG', 1,
+        'textB', 1,
+        'closeWhenClicked', true,
+        'notCheckable', true
+    )
+end
+
 function ME:RollMenuRegister(self)
-	MysticExtended_DewdropMenu:Register(self,
+	dewdrop:Register(self,
         'point', function(parent)
             return "TOP", "BOTTOM"
         end,
         'children', function(level, value)
             if level == 1 then
-                MysticExtended_DewdropMenu:AddLine(
-                    'text', "Select Lists to Roll",
-                    'hasArrow', true,
-                    'value', ME.EnchantSaveLists,
-                    'notCheckable', true
-                )
-                MysticExtended_DewdropMenu:AddLine(
-                    'text', "Auto Extract Unknown",
-                    'hasArrow', true,
-                    'value', "extractUnknown",
-                    'notCheckable', true
-                )
-                if mysticMastro then
-                    MysticExtended_DewdropMenu:AddLine(
-                        'text', "Reforge Based On Auction Price",
-                        'hasArrow', true,
-                        'value', "mysticMastro",
-                        'notCheckable', true
-                    )
-                end
-                MysticExtended_DewdropMenu:AddLine(
-                    'text', "Roll Quality",
-                    'hasArrow', true,
-                    'value', "RollQuality",
-                    'notCheckable', true
-                )
-                MysticExtended_DewdropMenu:AddLine(
-                    'text', "Roll For Extracts",
-                    'value', "RollExtracts",
-                    'hasArrow', true,
-                    'notCheckable', true
-                )
-                MysticExtended_DewdropMenu:AddLine(
-					'text', "Close Menu",
-                    'textR', 0,
-                    'textG', 1,
-                    'textB', 1,
-					'func', function() MysticExtended_DewdropMenu:Close() end,
-					'notCheckable', true
-				)
+                rollMenuLevel1(value)
             elseif level == 2 then
-                if value == "extractUnknown" then
-                    MysticExtended_DewdropMenu:AddLine(
-                            'text', "Enable",
-                            'func', QualityEnable,
-                            'arg1', "UnknownAutoExtract",
-                            'checked', ME.db.UnknownAutoExtract
-                        )
-                    for k,v in ipairs(ME.QualityList) do
-                        local qualityColor = select(4,GetItemQualityColor(v[2]))
-                        MysticExtended_DewdropMenu:AddLine(
-                            'text', qualityColor..v[1],
-                            'arg1', 2,
-                            'arg2', k,
-                            'func', QualitySet,
-                            'checked', ME.db.QualityList[2][k]
-                        )
-                    end
-                elseif value == "mysticMastro" then
-                    MysticExtended_DewdropMenu:AddLine(
-                            'text', "Enable",
-                            'func', QualityEnable,
-                            'arg1', "mysticMastro",
-                            'checked', ME.db.mysticMastro
-                        )
-                elseif value == "RollQuality" then
-                    MysticExtended_DewdropMenu:AddLine(
-                            'text', "Enable",
-                            'func', QualityEnable,
-                            'arg1', "RollByQuality",
-                            'checked', ME.db.RollByQuality
-                        )
-                    for k,v in ipairs(ME.QualityList) do
-                        local qualityColor = select(4,GetItemQualityColor(v[2]))
-                        MysticExtended_DewdropMenu:AddLine(
-                            'text', qualityColor..v[1],
-                            'arg1', 1,
-                            'arg2', k,
-                            'func', QualitySet,
-                            'checked', ME.db.QualityList[1][k]
-                        )
-                    end
-                elseif value == ME.EnchantSaveLists then
-                    for i,v in ipairs(value) do
-                        realmCheck(v);
-                        MysticExtended_DewdropMenu:AddLine(
-                            'text', v.Name,
-                            'hasArrow', true,
-                            'value', {v,i},
-                            'notCheckable', true
-                        )
-                    end
-                elseif value == "RollExtracts" then
-                    MysticExtended_DewdropMenu:AddLine(
-                            'text', "Enable",
-                            'checked', RollExtracts,
-                            'func', RollExtractsEnable
-                        )
-                    MysticExtended_DewdropMenu:AddLine(
-                        'text', "When this option is enabled it will ignore all",
-                        'notCheckable', true
-                    )
-                    MysticExtended_DewdropMenu:AddLine(
-                        'text', "other rolling options and just roll on the",
-                        'notCheckable', true
-                    )
-                    MysticExtended_DewdropMenu:AddLine(
-                        'text', "first item it finds till you run out of runes",
-                        'notCheckable', true
-                    )
-                end
-                MysticExtended_DewdropMenu:AddLine(
-					'text', "Close Menu",
-                    'textR', 0,
-                    'textG', 1,
-                    'textB', 1,
-					'func', function() MysticExtended_DewdropMenu:Close() end,
-					'notCheckable', true
-				)
+                rollMenuLevel2(value)
             elseif level == 3 then
-                MysticExtended_DewdropMenu:AddLine(
-                    'text', "Enable List",
-                    'arg1', value[2],
-                    'arg2', "enableRoll",
-                    'arg3', "enableRollExt",
-                    'func', EnableClick,
-                    'checked', value[1][realmName]["enableRoll"]
-                )
-                MysticExtended_DewdropMenu:AddLine(
-                    'text', "Enable Only When You Have Extracts",
-                    'arg1', value[2],
-                    'arg2', "enableRollExt",
-                    'arg3', "enableRoll",
-                    'func', EnableClick,
-                    'checked', value[1][realmName]["enableRollExt"]
-                )
-                MysticExtended_DewdropMenu:AddLine(
-                    'text', "Disenchant to Collection and remove from list",
-                    'arg1', value[2],
-                    'arg2', "enableDisenchant",
-                    'arg3', "ignoreList",
-                    'func', EnableClick,
-                    'checked', value[1][realmName]["enableDisenchant"]
-                )
-                MysticExtended_DewdropMenu:AddLine(
-                    'text', "ReRoll items on this list when found",
-                    'arg1', value[2],
-                    'arg2', "ignoreList",
-                    'arg3', "enableDisenchant",
-                    'func', EnableClick,
-                    'checked', value[1][realmName]["ignoreList"]
-                )
-                MysticExtended_DewdropMenu:AddLine(
-				    'text', "Close Menu",
-                    'textR', 0,
-                    'textG', 1,
-                    'textB', 1,
-				    'func', function() MysticExtended_DewdropMenu:Close() end,
-				    'notCheckable', true
-				)
+                rollMenuLevel3(value)
             end
 		end,
 		'dontHook', true
@@ -656,17 +670,17 @@ function ME:RollMenuRegister(self)
 end
 
 function MysticExtended_OnClick(self, arg1)
-    if MysticExtended_DewdropMenu:IsOpen() then
-        MysticExtended_DewdropMenu:Close();
+    if dewdrop:IsOpen() then
+        dewdrop:Close();
     else
         if (arg1 == "LeftButton") then
-            MysticExtended_StartAutoRoll();
+            startAutoRoll();
         elseif (arg1 == "RightButton") then
             if IsAltKeyDown() then
                 MysticEnchantingFrame:Display();
             else
                 ME:RollMenuRegister(self);
-                MysticExtended_DewdropMenu:Open(this);
+                dewdrop:Open(this);
             end
         end
     end
@@ -787,18 +801,6 @@ local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticEx
         MysticExtended_Secure:Hide();
     end);
 
-local function CloneTable(t) -- return a copy of the table t
-    local new = {}; -- create a new table
-    local i, v = next(t, nil); -- i is an index of t, v = t[i]
-    while i do
-        if type(v) == "table" then
-            v = CloneTable(v);
-        end
-        new[i] = v;
-        i, v = next(t, i); -- get next index
-    end
-    return new;
-end
 --[[
 MysticExtended_SlashCommand(msg):
 msg - takes the argument for the /mysticextended command so that the appropriate action can be performed
@@ -838,15 +840,12 @@ end
 
 function ME:OnInitialize()
     realmName = GetRealmName();
-    if (MysticExtendedDB == nil) then
-        MysticExtendedDB = {Settings = {}}
-    elseif not MysticExtendedDB.Settings[realmName] then
-        MysticExtendedDB.Settings[realmName] = {}
-    end
+    if not MysticExtendedDB then MysticExtendedDB = {} end
+    if not MysticExtendedDB.Settings then MysticExtendedDB.Settings = {} end
+    if not MysticExtendedDB.Settings[realmName] then MysticExtendedDB.Settings[realmName] = {} end
 
     ME.db = MysticExtendedDB.Settings[realmName]
     ME.EnchantSaveLists = MysticExtendedDB.EnchantSaveLists
-
     for _,v in ipairs(DefaultSettings) do
         if ME.db[v.TableName] == nil then
             if #v > 1 then
@@ -867,11 +866,15 @@ function ME:OnInitialize()
         end
     end
 
+    ME.RollExtracts = ME.db.DefaultToExtract
+
     for _, v in ipairs(ME.EnchantSaveLists) do
         if v[realmName] == nil then
             v[realmName] = { ["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false };
         end
     end
+
+    ME.AutoRolling = false
 
     --Enable the use of /al or /atlasloot to open the loot browser
     SLASH_MYSTICEXTENDED1 = "/mysticextended";
@@ -1006,8 +1009,6 @@ function ME:OnEnable()
     ME:RegisterEvent("GUILDBANKFRAME_OPENED", guildBankFrameOpened);
     ME:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST", MysticExtended_OnEvent);
 
-    ME:CalculateKnowEnchants()
-
     if not ME.db.minimap then
         ME.db.minimap = {hide = false}
     end
@@ -1042,11 +1043,11 @@ end
 function minimap.OnClick(self, button)
     GameTooltip:Hide()
     if button == "RightButton" then
-        if MysticExtended_MiniMapMenu:IsOpen() then
-            MysticExtended_MiniMapMenu:Close();
+        if dewdrop:IsOpen() then
+            dewdrop:Close();
         else
             ME:MiniMapMenuRegister(self);
-            MysticExtended_MiniMapMenu:Open(this);
+            dewdrop:Open(this);
         end
     elseif not MysticExtendedExtractFrame:IsVisible() and button == 'LeftButton' then
         MysticExtendedExtractFrame:Show();
@@ -1085,34 +1086,97 @@ local function toggleFloatingbutton()
         MysticExtendedFrame:Show();
         MysticExtendedFrame_Menu:Show();
     end
-    MysticExtended_MiniMapMenu:Close();
 end
 
+-- returns true, if player has item with given ID in inventory or bags and it's not on cooldown
+local function hasItem(itemID)
+    local item, found, id
+    -- scan bags
+    for bag = 0, 4 do
+      for slot = 1, GetContainerNumSlots(bag) do
+        item = GetContainerItemLink(bag, slot)
+        if item then
+          found, _, id = item:find('^|c%x+|Hitem:(%d+):.+')
+          if found and tonumber(id) == itemID then
+            return true
+          end
+        end
+      end
+    end
+    return false
+  end
+
 function ME:MiniMapMenuRegister(self)
-	MysticExtended_MiniMapMenu:Register(self,
+	dewdrop:Register(self,
         'point', function(parent)
             return "TOP", "BOTTOM"
         end,
         'children', function(level, value)
             if level == 1 then
-                MysticExtended_MiniMapMenu:AddLine(
+                local text = "Start Reforge"
+                if ME.AutoRolling then
+                    text = "Reforging"
+                end
+                dewdrop:AddLine(
+                    'text', text,
+                    'func', startAutoRoll,
+                    'notCheckable', true,
+                    'closeWhenClicked', true
+                )
+                local itemID = 1903513
+                if hasItem(itemID) then
+                    local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(itemID)
+                    local startTime, duration = GetItemCooldown(itemID)
+                    local cooldown = math.ceil(((duration - (GetTime() - startTime))/60))
+                    local text = name
+                    if cooldown > 0 then
+                      text = name.." |cFF00FFFF("..cooldown.." ".. "mins" .. ")"
+                    end
+                    local secure = {
+                      type1 = 'item',
+                      item = name
+                    }
+                    dewdrop:AddLine(
+                      'text', text,
+                      'secure', secure,
+                      'icon', icon,
+                      'closeWhenClicked', true
+                    )
+                end
+                dewdrop:AddLine(
+                    'text', "Roll Options",
+                    'hasArrow', true,
+                    'value', "Roll Options",
+                    'notCheckable', true
+                )
+                dewdrop:AddLine(
                     'text', "Show/Hide Floating Button",
                     'func', toggleFloatingbutton,
-                    'notCheckable', true
+                    'notCheckable', true,
+                    'closeWhenClicked', true
                 )
-                MysticExtended_MiniMapMenu:AddLine(
+                dewdrop:AddLine(
                     'text', "Options",
                     'func', ME.OptionsToggle,
-                    'notCheckable', true
+                    'notCheckable', true,
+                    'closeWhenClicked', true
                 )
-                MysticExtended_MiniMapMenu:AddLine(
+                dewdrop:AddLine(
 					'text', "Close Menu",
                     'textR', 0,
                     'textG', 1,
                     'textB', 1,
-					'func', function() MysticExtended_MiniMapMenu:Close() end,
+					'closeWhenClicked', true,
 					'notCheckable', true
 				)
+            elseif level == 2 then
+                if value == "Roll Options" then
+                    rollMenuLevel1(value)
+                end
+            elseif level == 3 then
+                rollMenuLevel2(value)
+            elseif level == 4 then
+                rollMenuLevel3(value)
             end
 		end,
 		'dontHook', true

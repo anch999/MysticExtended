@@ -1,4 +1,5 @@
 local ME = LibStub("AceAddon-3.0"):GetAddon("MysticExtended")
+local dewdrop = AceLibrary("Dewdrop-2.0");
 local mainframe = CreateFrame("FRAME", "MysticExtendedListFrame", MysticEnchantingFrame,"UIPanelDialogTemplate")
     mainframe:SetSize(305,508);
     mainframe:SetPoint("RIGHT", MysticEnchantingFrame, "RIGHT", 295, 0);
@@ -24,6 +25,21 @@ MysticEnchantingFrame.MysticExtendedText:SetFontObject(GameFontNormal)
 MysticEnchantingFrame.MysticExtendedText:SetText("Mystic Extended");
 MysticEnchantingFrame.MysticExtendedText:SetPoint("TOPRIGHT", -70, -11);
 MysticEnchantingFrame.MysticExtendedText:SetShadowOffset(1,-1);
+
+MysticEnchantingFrame.CollectionsList.PrevButton:SetPoint("RIGHT", MysticEnchantingFrame.CollectionsList, "BOTTOM", 6, 50)
+MysticEnchantingFrame.MysticExtendedKnownCount = CreateFrame("Button", nil, MysticEnchantingFrame)
+MysticEnchantingFrame.MysticExtendedKnownCount:SetPoint("BOTTOM", 135, 48)
+MysticEnchantingFrame.MysticExtendedKnownCount:SetSize(190,20)
+MysticEnchantingFrame.MysticExtendedKnownCount.Lable = MysticEnchantingFrame.MysticExtendedKnownCount:CreateFontString(nil , "BORDER", "GameFontNormal")
+MysticEnchantingFrame.MysticExtendedKnownCount.Lable:SetJustifyH("LEFT")
+MysticEnchantingFrame.MysticExtendedKnownCount.Lable:SetPoint("LEFT", 0, 0);
+MysticEnchantingFrame.MysticExtendedKnownCount:SetScript("OnShow", function()
+    ME:CalculateKnowEnchants()
+    MysticEnchantingFrame.MysticExtendedKnownCount.Lable:SetText("Known Enchants: |cffffffff".. ME.db.KnownEnchantNumbers.Total.Known.."/"..ME.db.KnownEnchantNumbers.Total.Total)
+end)
+MysticEnchantingFrame.MysticExtendedKnownCount:SetScript("OnEnter", function(self) ME:EnchantCountTooltip(self) end)
+MysticEnchantingFrame.MysticExtendedKnownCount:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
 
 local realmName = GetRealmName();
 local showtable = {};
@@ -116,7 +132,7 @@ StaticPopupDialogs["MYSTICEXTENDED_DELETELIST"] = {
 }
 
 local function exportString()
-    MysticExtended_OptionsMenu:Close();
+    dewdrop:Close();
     local data = {};
     for i,v in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
         tinsert(data,{v[1]});
@@ -126,34 +142,34 @@ local function exportString()
 end
 
 function ME:ListFrameMenuRegister(self)
-	MysticExtended_OptionsMenu:Register(self,
+	dewdrop:Register(self,
         'point', function(parent)
             return "TOP", "BOTTOM"
         end,
         'children', function(level, value)
             if level == 1 then
-                MysticExtended_OptionsMenu:AddLine(
+                dewdrop:AddLine(
                     'text', "Send Current List",
                     'func', function() StaticPopup_Show("MYSTICEXTENDED_SEND_ENCHANTLIST",ME.EnchantSaveLists[ME.db.currentSelectedList].Name) end,
                     'notCheckable', true
                 )
-                MysticExtended_OptionsMenu:AddLine(
+                dewdrop:AddLine(
                     'text', "Export List",
                     'func', exportString,
                     'tooltip', "Exports a string to clipboard",
                     'notCheckable', true
                 )
-                MysticExtended_OptionsMenu:AddLine(
+                dewdrop:AddLine(
                     'text', "Import List",
                     'func', function() StaticPopup_Show("MYSTICEXTENDED_IMPORT_ENCHANTLIST") end,
                     'notCheckable', true
                 )
-                MysticExtended_OptionsMenu:AddLine(
+                dewdrop:AddLine(
 					'text', "Close Menu",
                     'textR', 0,
                     'textG', 1,
                     'textB', 1,
-					'func', function() MysticExtended_OptionsMenu:Close() end,
+					'func', function() dewdrop:Close() end,
 					'notCheckable', true
 				)
             end
@@ -363,11 +379,11 @@ local sharebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameMenuButto
     sharebuttonlist:SetText("Export/Share");
     sharebuttonlist:RegisterForClicks("LeftButtonDown");
     sharebuttonlist:SetScript("OnClick", function(self)
-        if MysticExtended_OptionsMenu:IsOpen() then
-            MysticExtended_OptionsMenu:Close();
+        if dewdrop:IsOpen() then
+            dewdrop:Close();
         else
             ME:ListFrameMenuRegister(self);
-            MysticExtended_OptionsMenu:Open(this);
+            dewdrop:Open(this);
         end
     end);
 
