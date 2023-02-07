@@ -225,4 +225,11 @@ local rollExtract = CreateFrame("CheckButton", "MysticExtendedOptions_DefaultToE
 		ME.db.DefaultToExtract = not ME.db.DefaultToExtract
 		ME.RollExtracts = ME.db.DefaultToExtract
 	end);
-	
+
+	hooksecurefunc("ChatEdit_InsertLink", function(link)
+		local id
+		if MysticExtendedOptionsFrame:IsVisible() then
+			id = tonumber(link:match("item:(%d+)"))
+			MysticExtendedOptions_AddIDeditbox:SetText(id);
+		end
+	end)

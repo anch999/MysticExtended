@@ -315,9 +315,12 @@ local rows = setmetatable({}, { __index = function(t, i)
             end
             MysticExtended_ScrollFrameUpdate()    
         elseif button == "LeftButton" then
-            Internal_CopyToClipboard(GetSpellInfo(MYSTIC_ENCHANTS[row.enchantID].spellID))
+            if IsShiftKeyDown() then
+                ChatEdit_InsertLink(ME:CreateItemLink(row.enchantID))
+            else
+                Internal_CopyToClipboard(GetSpellInfo(MYSTIC_ENCHANTS[row.enchantID].spellID))
+            end
         end
-        
     end)
     row:SetScript("OnEnter", function(self)
         ItemTemplate_OnEnter(self)
@@ -341,27 +344,19 @@ function ME:CreateItemLink(id)
     return link
 end
 
-hooksecurefunc("ChatEdit_InsertLink", function(link)
-	local id
-    if MysticExtendedOptionsFrame:IsVisible() then
-        id = tonumber(link:match("item:(%d+)"))
-        MysticExtendedOptions_AddIDeditbox:SetText(id);
-    else
-        if MysticExtendedListFrame:IsVisible() then
-            if link:match("item:") then
-                id = GetREInSlot(GetMouseFocus():GetParent():GetID(), GetMouseFocus():GetID())
-            else
-                id = tonumber(link:match("spell:(%d+)"))
-                id = MYSTIC_ENCHANT_SPELLS[id]
-            end
+for i = 1, 15 do
+    _G["CollectionItemFrame"..i].Button:HookScript("OnClick", function(self)
+        if IsAltKeyDown() then
+            if MysticExtendedListFrame:IsVisible() then
+                local id = MYSTIC_ENCHANT_SPELLS[self.Enchant]
                 if not GetSavedEnchant(id) then
                     tinsert(ME.EnchantSaveLists[ME.db.currentSelectedList],{id})
                     MysticExtended_ScrollFrameUpdate();
                 end
-        return true
+            end
         end
-    end
-end)
+    end)
+end
 
 ------------------------------------------------------------------
 --Reforge button in list interface
@@ -435,12 +430,25 @@ meFrame:HookScript("OnHide",
         MYSTICEXTENDED_BAGID, MYSTICEXTENDED_SLOTID = nil,nil
         end)
 
+hooksecurefunc("ContainerFrameItemButton_OnModifiedClick", function(self)
+    if MysticExtendedListFrame:IsVisible() and IsAltKeyDown() then
+        local bagID, slotID = self:GetParent():GetID(), self:GetID();
+        local enchant = GetREInSlot(bagID, slotID)
+            if enchant and not GetSavedEnchant(enchant) then
+                tinsert(ME.EnchantSaveLists[ME.db.currentSelectedList],{enchant})
+                MysticExtended_ScrollFrameUpdate();
+            end
+    end
+end)
+
 hooksecurefunc("ContainerFrameItemButton_OnClick", function(self, button)
-    local bagID, slotID = self:GetParent():GetID(), self:GetID();
-    MYSTICEXTENDED_BAGID = bagID
-    MYSTICEXTENDED_SLOTID = slotID
-    MYSTICEXTENDED_ITEMSET = false
-    ME:StopAutoRoll()
+    if meFrame:IsVisible() then
+        local bagID, slotID = self:GetParent():GetID(), self:GetID();
+        MYSTICEXTENDED_BAGID = bagID
+        MYSTICEXTENDED_SLOTID = slotID
+        MYSTICEXTENDED_ITEMSET = false
+        ME:StopAutoRoll()
+    end
 end)
 
 MysticEnchantingFrameEnchantFrameSlotButton:HookScript("OnClick", function()

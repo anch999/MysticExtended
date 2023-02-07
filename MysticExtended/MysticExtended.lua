@@ -14,6 +14,7 @@ local realmName = GetRealmName();
 --Set Savedvariables defaults
 local bagnonGuildbank = false;
 local mysticMastro = false;
+local auctionator = false;
 MYSTICEXTENDED_ITEMSET = false;
 local reFound = false;
 
@@ -103,7 +104,7 @@ function ME:SearchLists(enchantID, type)
 end
 
 --returns if the item needs to be reforged or not
-function ME:RollCheck(bagID, slotID, extractoff)
+local function rollCheck(bagID, slotID, extractoff)
     if ME.RollExtracts then return true end
     local enchantID = GetREInSlot(bagID, slotID)
     if not enchantID then return true end
@@ -132,6 +133,11 @@ function ME:RollCheck(bagID, slotID, extractoff)
             ME.db.MinGold >= MysticMaestroData[realmName].RE_AH_STATISTICS[enchantID].current.Min then
             if ME.db.Debug then print("Gold") end
             return true
+        elseif auctionator and ME.db.auctionator and AUCTIONATOR_MYSTIC_ENCHANT_PRICE_DATABASE[realmName][enchantID] and
+        AUCTIONATOR_MYSTIC_ENCHANT_PRICE_DATABASE[realmName][enchantID].Current and
+        ME.db.MinGold >= AUCTIONATOR_MYSTIC_ENCHANT_PRICE_DATABASE[realmName][enchantID].Current then
+        if ME.db.Debug then print("Gold") end
+        return true
         elseif not ME:DoRarity(enchantID,1) then
             --reforge the raritys that arnt selected
             if ME.db.Debug then print("Rarity") end
@@ -185,49 +191,33 @@ local function GetRequiredRollsForLevel(level)
     return floor(354 * level + 7.5 * level * level)
 end
 
-function ME:CalculateKnowEnchants()
-    local known = {
-        Commen = { Total = 0, Known = 0, Unknown = 0 },
-        Rare = { Total = 0, Known = 0, Unknown = 0 },
-        Epic = { Total = 0, Known = 0, Unknown = 0 },
-        Legendary = { Total = 0, Known = 0, Unknown = 0 },
-        Total = {Total = 0, Known = 0}
-    }
 
-    for _, v in pairs(MYSTIC_ENCHANTS) do
-       if v.enchantID then
-          if v.quality == 2 then
-             known.Commen.Total = known.Commen.Total + 1
-          elseif v.quality == 3 then
-            known.Rare.Total = known.Rare.Total + 1
-          elseif v.quality == 4 then
-            known.Epic.Total = known.Epic.Total + 1
-          elseif v.quality == 5 then
-            known.Legendary.Total = known.Legendary.Total + 1
-          end
-
-          if IsReforgeEnchantmentKnown(v.enchantID) then
-             if v.quality == 2 then
-                known.Commen.Known = known.Commen.Known + 1
-             elseif v.quality == 3 then
-                known.Rare.Known = known.Rare.Known + 1
-             elseif v.quality == 4 then
-                known.Epic.Known = known.Epic.Known + 1
-             elseif v.quality == 5 then
-                known.Legendary.Known = known.Legendary.Known + 1
-             end
-             known.Total.Known = known.Total.Known + 1
-          end
-          known.Total.Total = known.Total.Total + 1
-       end
+--removes item from a list if you know it allready or just disenchanted it
+local function removeFound(enchantID)
+    local function findEnchantID(table)
+        for i, v in ipairs(table) do
+            if v[1] == enchantID then
+                return true, i
+            end
+        end
     end
-    known.Commen.Unknown = known.Commen.Total - known.Commen.Known
-    known.Rare.Unknown = known.Rare.Total - known.Rare.Known
-    known.Epic.Unknown = known.Epic.Total - known.Epic.Known
-    known.Legendary.Unknown = known.Legendary.Total - known.Legendary.Known 
 
-    ME.db.KnownEnchantNumbers = known
-    MysticExtendedExtractFrame.knownCount.Lable:SetText("Known Enchants: |cffffffff".. ME.db.KnownEnchantNumbers.Total.Known.."/"..ME.db.KnownEnchantNumbers.Total.Total)
+    local notOnList = true
+    for _,v in pairs(ME.EnchantSaveLists) do
+        if v[realmName].enableDisenchant or v[realmName].enableRollExt then
+            local remove, ID = findEnchantID(v)
+                if remove then
+                    tremove(v,ID)
+                    if ME.db.ChatMSG then
+                        local itemLink = ME:CreateItemLink(enchantID)
+                        DEFAULT_CHAT_FRAME:AddMessage(itemLink .. " Has been added to your collection and removed from |cFF00FFFF".. v.Name .. " |cfffffffflist")
+                        notOnList = false
+                    end
+                end
+        end
+    end
+    MysticExtended_ScrollFrameUpdate()
+    return notOnList
 end
 
 --[[
@@ -253,7 +243,7 @@ function MysticExtended_OnEvent(event, arg1, arg2, arg3)
     if event == "COMMENTATOR_SKIRMISH_QUEUE_REQUEST" then
         if arg1 == "ASCENSION_REFORGE_ENCHANTMENT_LEARNED" then
             local RE = GetREData(arg2)
-            local notOnList = ME:RemoveFound(RE.enchantID)
+            local notOnList = removeFound(RE.enchantID)
             if ME.db.ChatMSG and notOnList then
                 local itemLink = ME:CreateItemLink(RE.enchantID)
                 DEFAULT_CHAT_FRAME:AddMessage(itemLink .. " Has been added to your collection")
@@ -283,7 +273,7 @@ function MysticExtended_OnEvent(event, arg1, arg2, arg3)
 end
 
 --checks bag slot to see if it has an item on the reroll items list
-function ME:GetItemID(bagID, slotID, item)
+local function getItemID(bagID, slotID, item)
     if not item and bagID and slotID then
         item = GetContainerItemID(bagID, slotID);
     end
@@ -294,40 +284,12 @@ function ME:GetItemID(bagID, slotID, item)
     end
 end
 
---removes item from a list if you know it allready or just disenchanted it
-function ME:RemoveFound(enchantID)
-    local function findEnchantID(table)
-        for i, v in ipairs(table) do
-            if v[1] == enchantID then
-                return true, i
-            end
-        end
-    end
-
-    local notOnList = true
-    for _,v in pairs(ME.EnchantSaveLists) do
-        if v[realmName].enableDisenchant or v[realmName].enableRollExt then
-            local remove, ID = findEnchantID(v)
-                if remove then
-                    tremove(v,ID)
-                    if ME.db.ChatMSG then
-                        local itemLink = ME:CreateItemLink(enchantID)
-                        DEFAULT_CHAT_FRAME:AddMessage(itemLink .. " Has been added to your collection and removed from |cFF00FFFF".. v.Name .. " |cfffffffflist")
-                        notOnList = false
-                    end
-                end
-        end
-    end
-    MysticExtended_ScrollFrameUpdate()
-    return notOnList
-end
-
 function ME:ExtractEnchant(bagID,slotID,enchantID)
     --checks to see if you have any mystic extracts
     if GetItemCount(98463) and (GetItemCount(98463) > 0) then
         --checks to see if you know the enchant if not extract and remove from list
         if IsReforgeEnchantmentKnown(enchantID) then
-            ME:RemoveFound(enchantID)
+            removeFound(enchantID)
             DEFAULT_CHAT_FRAME:AddMessage("You already know this enchant removed from list")
         else
             RequestSlotReforgeExtraction(bagID, slotID)
@@ -342,8 +304,8 @@ end
 local function FindNextItem()
     for bagID = 0, 4 do
         for slotID = 1, GetContainerNumSlots(bagID) do
-            if ME:GetItemID(bagID,slotID) then
-                 if ME:RollCheck(bagID, slotID) then
+            if getItemID(bagID,slotID) then
+                 if rollCheck(bagID, slotID) then
                     return bagID, slotID, true
                  end
             end
@@ -358,7 +320,7 @@ function ME:RollEnchant()
     reFound = false
     local bagID, slotID, reforge
     if MYSTICEXTENDED_ITEMSET and MYSTICEXTENDED_BAGID and MYSTICEXTENDED_SLOTID then
-        reforge = ME:RollCheck(MYSTICEXTENDED_BAGID, MYSTICEXTENDED_SLOTID, true)
+        reforge = rollCheck(MYSTICEXTENDED_BAGID, MYSTICEXTENDED_SLOTID, true)
         bagID, slotID = MYSTICEXTENDED_BAGID, MYSTICEXTENDED_SLOTID
         if not reforge then
             reFound = true
@@ -489,11 +451,11 @@ local function rollMenuLevel1(value)
         'value', "extractUnknown",
         'notCheckable', true
     )
-    if mysticMastro then
+    if mysticMastro or auctionator then
         dewdrop:AddLine(
             'text', "Reforge Based On Auction Price",
             'hasArrow', true,
-            'value', "mysticMastro",
+            'value', "auction",
             'notCheckable', true
         )
     end
@@ -537,13 +499,31 @@ local function rollMenuLevel2(value)
                 'checked', ME.db.QualityList[2][k]
             )
         end
-    elseif value == "mysticMastro" then
-        dewdrop:AddLine(
-                'text', "Enable",
-                'func', QualityEnable,
-                'arg1', "mysticMastro",
-                'checked', ME.db.mysticMastro
+    elseif value == "auction" then
+        if auctionator then
+            dewdrop:AddLine(
+                'text', "Use Auctionator Price Database",
+                'func', function()
+                    ME.db.auctionator = not ME.db.auctionator
+                    if ME.db.auctionator then
+                        ME.db.mysticMastro = false
+                    end
+                end,
+                'checked', ME.db.auctionator
             )
+        end
+        if mysticMastro then
+            dewdrop:AddLine(
+                    'text', "Use MysticMastro Price Database",
+                    'func', function()
+                        ME.db.mysticMastro = not ME.db.mysticMastro
+                        if ME.db.mysticMastro then
+                            ME.db.auctionator = false
+                        end
+                    end,
+                    'checked', ME.db.mysticMastro
+                )
+        end
     elseif value == "RollQuality" then
         dewdrop:AddLine(
                 'text', "Enable",
@@ -904,7 +884,7 @@ local function guildBankFrameOpened()
         for bagID = 0, 4 do
             for slotID = 1, GetContainerNumSlots(bagID) do
                 local enchantID = GetREInSlot(bagID, slotID)
-                if enchantID and ME:GetItemID(bagID, slotID) and
+                if enchantID and getItemID(bagID, slotID) and
                 (ME:SearchLists(enchantID, "Keep") or (ME:DoRarity(enchantID,1) and not ME:SearchLists(enchantID, "Ignore"))) then
                     UseContainerItem(bagID, slotID)
                 end
@@ -920,7 +900,7 @@ local function guildBankFrameOpened()
             if GetGuildBankItemLink(GetCurrentGuildBankTab(), c) then
                 local id = tonumber(select(3,
                     strfind(GetGuildBankItemLink(GetCurrentGuildBankTab(), c), "^|%x+|Hitem:(%-?%d+).*")))
-                if ME:GetItemID(nil, nil, id) then
+                if getItemID(nil, nil, id) then
                     AutoStoreGuildBankItem(GetCurrentGuildBankTab(), c)
                 end
             end
@@ -1028,6 +1008,11 @@ function ME:OnEnable()
         mysticMastro = true
         MysticExtended_MoneyFrame:Show()
     end
+    if select(4,GetAddOnInfo('Auctionator')) then
+        auctionator = true
+        MysticExtended_MoneyFrame:Show()
+    end
+
     MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,ME.db.MinGold)
 end
 
