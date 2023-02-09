@@ -414,6 +414,7 @@ local meFrame = MysticEnchantingFrame
 --Show list view when Mystic Enchanting frame opens
 meFrame:HookScript("OnShow",
         function()
+            if ME.db.UnlockEnchantWindow then AT_MYSTIC_ENCHANT_ALTAR = true end
             if ME.db.ListFrameLastState then
                 MysticExtendedListFrame:Show();
                 showFrameBttn:SetText("Hide");

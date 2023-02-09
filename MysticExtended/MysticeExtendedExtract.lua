@@ -285,9 +285,9 @@ StaticPopupDialogs["MYSTICEXTENDED_CONFIRM_EXTRACT"] = {
 
     function ME:EnchantCountTooltip(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(select(4, GetItemQualityColor(2)).."Commen Enchants")
-        GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Commen.Known.."/"..ME.db.KnownEnchantNumbers.Commen.Total)
-        GameTooltip:AddLine("|cffffffffUnknown: "..ME.db.KnownEnchantNumbers.Commen.Unknown)
+        GameTooltip:AddLine(select(4, GetItemQualityColor(2)).."Uncommon Enchants")
+        GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Uncommon.Known.."/"..ME.db.KnownEnchantNumbers.Uncommon.Total)
+        GameTooltip:AddLine("|cffffffffUnknown: "..ME.db.KnownEnchantNumbers.Uncommon.Unknown)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine(select(4, GetItemQualityColor(3)).."Rare Enchants")
         GameTooltip:AddLine("|cffffffffKnown: "..ME.db.KnownEnchantNumbers.Rare.Known.."/"..ME.db.KnownEnchantNumbers.Rare.Total)
@@ -305,7 +305,7 @@ StaticPopupDialogs["MYSTICEXTENDED_CONFIRM_EXTRACT"] = {
 
 function ME:CalculateKnowEnchants()
     local known = {
-        Commen = { Total = 0, Known = 0, Unknown = 0 },
+        Uncommon = { Total = 0, Known = 0, Unknown = 0 },
         Rare = { Total = 0, Known = 0, Unknown = 0 },
         Epic = { Total = 0, Known = 0, Unknown = 0 },
         Legendary = { Total = 0, Known = 0, Unknown = 0 },
@@ -315,7 +315,7 @@ function ME:CalculateKnowEnchants()
     for _, v in pairs(MYSTIC_ENCHANTS) do
        if v.enchantID ~= 0 and v.flags ~= 1 then
           if v.quality == 2 then
-             known.Commen.Total = known.Commen.Total + 1
+             known.Uncommon.Total = known.Uncommon.Total + 1
           elseif v.quality == 3 then
             known.Rare.Total = known.Rare.Total + 1
           elseif v.quality == 4 then
@@ -326,7 +326,7 @@ function ME:CalculateKnowEnchants()
 
           if IsReforgeEnchantmentKnown(v.enchantID) then
              if v.quality == 2 then
-                known.Commen.Known = known.Commen.Known + 1
+                known.Uncommon.Known = known.Uncommon.Known + 1
              elseif v.quality == 3 then
                 known.Rare.Known = known.Rare.Known + 1
              elseif v.quality == 4 then
@@ -339,7 +339,7 @@ function ME:CalculateKnowEnchants()
           known.Total.Total = known.Total.Total + 1
        end
     end
-    known.Commen.Unknown = known.Commen.Total - known.Commen.Known
+    known.Uncommon.Unknown = known.Uncommon.Total - known.Uncommon.Known
     known.Rare.Unknown = known.Rare.Total - known.Rare.Known
     known.Epic.Unknown = known.Epic.Total - known.Epic.Known
     known.Legendary.Unknown = known.Legendary.Total - known.Legendary.Known 

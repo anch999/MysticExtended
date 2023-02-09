@@ -226,6 +226,15 @@ local rollExtract = CreateFrame("CheckButton", "MysticExtendedOptions_DefaultToE
 		ME.RollExtracts = ME.db.DefaultToExtract
 	end);
 
+local unlockEnchantFrame = CreateFrame("CheckButton", "MysticExtendedOptions_UnlockEnchantWindow", MysticExtendedOptionsFrame, "UICheckButtonTemplate");
+	unlockEnchantFrame:SetPoint("TOPRIGHT", -270, -205);
+	unlockEnchantFrame.Lable = unlockEnchantFrame:CreateFontString(nil , "BORDER", "GameFontNormal");
+	unlockEnchantFrame.Lable:SetJustifyH("LEFT");
+	unlockEnchantFrame.Lable:SetPoint("LEFT", 30, 0);
+	unlockEnchantFrame.Lable:SetSize(265, 60);
+	unlockEnchantFrame.Lable:SetText("Makes the enchant interface work without clicking the altar as long as you are standing near it");
+	unlockEnchantFrame:SetScript("OnClick", function() ME.db.UnlockEnchantWindow = not ME.db.UnlockEnchantWindow end);
+
 	hooksecurefunc("ChatEdit_InsertLink", function(link)
 		local id
 		if MysticExtendedOptionsFrame:IsVisible() then
