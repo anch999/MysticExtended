@@ -18,6 +18,7 @@ local auctionator = false;
 MYSTICEXTENDED_ITEMSET = false;
 local reFound = false;
 
+--Set Savedvariables defaults
 local DefaultSettings = {
     { TableName = "ReRollItems", 18863, 18853, 6992720 },
     { TableName = "ListFrameLastState", false },
@@ -51,6 +52,31 @@ local DefaultSettings = {
         Total = {Total = 0, Known = 0}
     },
 }
+
+--[[ TableName = Name of the saved setting
+CheckBox = Global name of the checkbox if it has one and first numbered table entry is the boolean
+Text = Global name of where the text and first numbered table entry is the default text ]]
+local function setupSettings(db)
+    for _,v in ipairs(DefaultSettings) do
+        if db[v.TableName] == nil then
+            if #v > 1 then
+                db[v.TableName] = {}
+                for _, n in ipairs(v) do
+                    tinsert(db[v.TableName], n)
+                end
+            else
+                db[v.TableName] = v[1]
+            end
+        end
+
+        if v.CheckBox then
+            _G[v.CheckBox]:SetChecked(db[v.TableName])
+        end
+        if v.Text then
+            _G[v.Text]:SetText(db[v.TableName])
+        end
+    end
+end
 
 ME.QualityList = {
     [1] = {"Uncommon",2},
@@ -673,14 +699,6 @@ local mainframe = CreateFrame("FRAME", "MysticExtendedFrame", UIParent, nil);
     mainframe:SetSize(70,70);
     mainframe:EnableMouse(true);
     mainframe:SetMovable(true);
-    --[[ mainframe:SetBackdrop({
-        bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
-        edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
-        tile = "true",
-        insets = {left = "11", right = "12", top = "12", bottom = "11"},
-        edgeSize = 32,
-        titleSize = 32,
-    }); ]]
     mainframe:RegisterForDrag("LeftButton");
     mainframe:SetScript("OnDragStart", function(self) mainframe:StartMoving() end);
     mainframe:SetScript("OnDragStop", function(self) mainframe:StopMovingOrSizing() end);
@@ -824,28 +842,10 @@ function ME:OnInitialize()
     if not MysticExtendedDB then MysticExtendedDB = {} end
     if not MysticExtendedDB.Settings then MysticExtendedDB.Settings = {} end
     if not MysticExtendedDB.Settings[realmName] then MysticExtendedDB.Settings[realmName] = {} end
-
+    if not MysticExtendedDB.EnchantSaveLists then MysticExtendedDB.EnchantSaveLists = { [1] = {Name = "Default"} } end
     ME.db = MysticExtendedDB.Settings[realmName]
     ME.EnchantSaveLists = MysticExtendedDB.EnchantSaveLists
-    for _,v in ipairs(DefaultSettings) do
-        if ME.db[v.TableName] == nil then
-            if #v > 1 then
-                ME.db[v.TableName] = {}
-                for _, n in ipairs(v) do
-                    tinsert(ME.db[v.TableName], n)
-                end
-            else
-                ME.db[v.TableName] = v[1]
-            end
-        end
-
-        if v.CheckBox then
-            _G[v.CheckBox]:SetChecked(ME.db[v.TableName])
-        end
-        if v.Text then
-            _G[v.Text]:SetText(ME.db[v.TableName])
-        end
-    end
+    setupSettings(ME.db)
 
     ME.RollExtracts = ME.db.DefaultToExtract
 
