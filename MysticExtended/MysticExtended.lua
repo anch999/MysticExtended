@@ -188,7 +188,7 @@ end
 --timer to try to roll an enchant every 3 seconds if no altar up
 function ME:Repeat()
     ME:RollEnchant();
-end
+end 
 
 --stops rolling and re registers ascensions ui 
 function ME:StopAutoRoll()
@@ -197,10 +197,10 @@ function ME:StopAutoRoll()
     MysticEnchantingFrame:RegisterEvent("COMMENTATOR_SKIRMISH_QUEUE_REQUEST");
     ME:CancelTimer(ME.rollTimer);
     MysticExtended_ListFrameReforgeButton:SetText("Start Reforge");
-    MysticExtendedFrame_Menu.Text:SetText("|cffffffffStart\nReforge");
+    MysticExtendedFrame.Text:SetText("|cffffffffStart\nReforge");
     MysticExtendedCountDownText:SetText("");
     MysticExtendedCountDownFrame:Hide();
-    MysticExtendedFrame_Menu_Icon_Breathing:Hide();
+    MysticExtendedFrame_Menu.AnimatedTex:Hide();
     ME.AutoRolling = false;
     reFound = false;
 end
@@ -393,9 +393,9 @@ local function startAutoRoll()
         end
         if IsMounted() then Dismount() end
         ME.AutoRolling = true;
-        MysticExtendedFrame_Menu_Icon_Breathing:Show();
+        MysticExtendedFrame_Menu.AnimatedTex:Show();
         MysticExtended_ListFrameReforgeButton:SetText("Auto Reforging");
-        MysticExtendedFrame_Menu.Text:SetText("|cffffffffAuto\nForging");
+        MysticExtendedFrame.Text:SetText("|cffffffffAuto\nForging");
         ME:RollEnchant();
 
     end
@@ -465,7 +465,7 @@ local function realmCheck(table)
     table[realmName] = {["enableDisenchant"] = false, ["enableRoll"] = false, ["ignoreList"] = false};    
 end
 
-local function rollMenuLevel1(value)
+local function rollMenuLevel1(value,frame)
     dewdrop:AddLine(
         'text', "Select Lists to Roll",
         'hasArrow', true,
@@ -498,6 +498,14 @@ local function rollMenuLevel1(value)
         'hasArrow', true,
         'notCheckable', true
     )
+    if frame == "MysticExtendedFrame" then
+        dewdrop:AddLine(
+            'text', "Unlock Frame",
+            'func', ME.UnlockFrame,
+            'notCheckable', true,
+            'closeWhenClicked', true
+        )
+    end
     dewdrop:AddLine(
         'text', "Close Menu",
         'textR', 0,
@@ -665,7 +673,7 @@ function ME:RollMenuRegister(self)
         end,
         'children', function(level, value)
             if level == 1 then
-                rollMenuLevel1(value)
+                rollMenuLevel1(value, "MysticExtendedFrame")
             elseif level == 2 then
                 rollMenuLevel2(value)
             elseif level == 3 then
@@ -687,64 +695,88 @@ function MysticExtended_OnClick(self, arg1)
                 MysticEnchantingFrame:Display();
             else
                 ME:RollMenuRegister(self);
-                dewdrop:Open(this);
+                dewdrop:Open(self);
             end
         end
     end
 end
 
+-- Used to show highlight as a frame mover
+local unlocked = false
+function ME:UnlockFrame()
+    if unlocked then
+        MysticExtendedFrame_Menu:Show()
+        MysticExtendedFrame.Highlight:Hide()
+        unlocked = false
+        GameTooltip:Hide()
+    else
+        MysticExtendedFrame_Menu:Hide()
+        MysticExtendedFrame.Highlight:Show()
+        unlocked = true
+    end
+end
+
 --Creates the main floating button
-local mainframe = CreateFrame("FRAME", "MysticExtendedFrame", UIParent, nil);
+local mainframe = CreateFrame("Button", "MysticExtendedFrame", UIParent, nil);
     mainframe:SetPoint("CENTER",0,0);
     mainframe:SetSize(70,70);
     mainframe:EnableMouse(true);
     mainframe:SetMovable(true);
     mainframe:RegisterForDrag("LeftButton");
+    mainframe:RegisterForClicks("RightButtonDown");
     mainframe:SetScript("OnDragStart", function(self) mainframe:StartMoving() end);
     mainframe:SetScript("OnDragStop", function(self) mainframe:StopMovingOrSizing() end);
+    mainframe:SetScript("OnClick", function(self, btnclick) if unlocked then ME:UnlockFrame() end end);
     mainframe:Hide();
+    mainframe.icon = mainframe:CreateTexture(nil,"ARTWORK");
+    mainframe.icon:SetSize(55,55);
+    mainframe.icon:SetPoint("CENTER", mainframe,"CENTER",0,0);
+    mainframe.icon:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\inv_blacksmithing_khazgoriananvil1");
+    mainframe.Highlight = mainframe:CreateTexture(nil, "OVERLAY");
+    mainframe.Highlight:SetSize(70,70);
+    mainframe.Highlight:SetPoint("CENTER", mainframe,"CENTER", 0, 0);
+    mainframe.Highlight:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\Slot2Selected");
+    mainframe.Highlight:Hide();
+    mainframe.Text = mainframe:CreateFontString();
+    mainframe.Text:SetFont("Fonts\\FRIZQT__.TTF", 12)
+    mainframe.Text:SetFontObject(GameFontNormal)
+    mainframe.Text:SetText("|cffffffffStart\nReforge");
+    mainframe.Text:SetPoint("CENTER", 0, 0);
+    mainframe.Text:SetShadowOffset(1,-1);
+    mainframe:SetScript("OnEnter", function(self)
+        if unlocked then
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:AddLine("Left click to drag")
+            GameTooltip:AddLine("Right click to lock frame")
+            GameTooltip:Show()
+        end
+    end)
+    mainframe:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-local countDownFrame = CreateFrame("FRAME", "MysticExtendedCountDownFrame", UIParrnt, nil);
-    countDownFrame:SetPoint("CENTER",0,200);
-    countDownFrame:SetSize(400,50);
-    countDownFrame:Hide();
-    countDownFrame.cText = countDownFrame:CreateFontString("MysticExtendedCountDownText","OVERLAY","GameFontNormal");
-    countDownFrame.cText:Show();
-    countDownFrame.cText:SetPoint("CENTER",0,0);
-    countDownFrame.nextlvlText = countDownFrame:CreateFontString("MysticExtendedNextLevelText","OVERLAY","GameFontNormal");
-    countDownFrame.nextlvlText:Show();
-    countDownFrame.nextlvlText:SetPoint("CENTER",0,-20);
-    countDownFrame.rollingText = countDownFrame:CreateFontString("MysticExtendedRollingText","OVERLAY","GameFontNormal");
-    countDownFrame.rollingText:Show();
-    countDownFrame.rollingText:SetPoint("CENTER",0,20);
-    countDownFrame.rollingText:SetText("Auto Reforging In Progress");
-
+local secureVisable = false
 local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticExtendedFrame);
     reforgebutton:SetSize(55,55);
-    reforgebutton:SetPoint("TOP", MysticExtendedFrame, "TOP", 0, -10);
-    reforgebutton.icon = reforgebutton:CreateTexture("MysticExtendedFrame_Menu_Icon","ARTWORK");
-    reforgebutton.icon:SetSize(55,55);
-    reforgebutton.icon:SetPoint("TOPLEFT", "MysticExtendedFrame_Menu","TOPLEFT",1,-1);
-    reforgebutton.icon:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\inv_blacksmithing_khazgoriananvil1");
-    reforgebutton.AnimatedTex = reforgebutton:CreateTexture("MysticExtendedFrame_Menu_Icon_Breathing", "OVERLAY");
+    reforgebutton:SetPoint("CENTER", mainframe, "CENTER", 0, 0);
+    reforgebutton.AnimatedTex = reforgebutton:CreateTexture(nil, "OVERLAY");
     reforgebutton.AnimatedTex:SetSize(59,59);
-    reforgebutton.AnimatedTex:SetPoint("CENTER", reforgebutton.icon, 0, 0);
+    reforgebutton.AnimatedTex:SetPoint("CENTER", mainframe.icon, 0, 0);
     reforgebutton.AnimatedTex:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\Slot2Selected");
     reforgebutton.AnimatedTex:SetAlpha(0);
     reforgebutton.AnimatedTex:Hide();
-    reforgebutton.Highlight = reforgebutton:CreateTexture("MysticExtendedFrame_Menu_Icon_Highlight", "OVERLAY");
+    reforgebutton.Highlight = reforgebutton:CreateTexture(nil, "OVERLAY");
     reforgebutton.Highlight:SetSize(59,59);
-    reforgebutton.Highlight:SetPoint("CENTER", reforgebutton.icon, 0, 0);
+    reforgebutton.Highlight:SetPoint("CENTER", mainframe.icon, 0, 0);
     reforgebutton.Highlight:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\Slot2Selected");
     reforgebutton.Highlight:Hide();
     reforgebutton:RegisterForClicks("LeftButtonDown", "RightButtonDown");
     reforgebutton:SetScript("OnClick", function(self, btnclick) MysticExtended_OnClick(self,btnclick) end);
-    reforgebutton:SetScript("OnEnter", function()
+    reforgebutton:SetScript("OnEnter", function(self)
         reforgebutton.Highlight:Show();
         if IsShiftKeyDown() then
             MysticExtended_Secure:Show();
+            secureVisable = true
         else
-            if not IsAltKeyDown() and not IsShiftKeyDown() then GameTooltip:SetOwner(this, "ANCHOR_RIGHT") end
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:AddLine("Left Click To Start Reforging");
             GameTooltip:AddLine("Shift Left Click To Drop An Atlar");
             GameTooltip:AddLine("Right Click To Show Roll Settings");
@@ -753,16 +785,13 @@ local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticEx
         end
 	end);
 	reforgebutton:SetScript("OnLeave", function()
-        reforgebutton.Highlight:Hide();
-        GameTooltip:Hide();
+        if not secureVisable then
+            reforgebutton.Highlight:Hide();
+            GameTooltip:Hide();
+        end
+        
     end);
     reforgebutton:Hide();
-    reforgebutton.Text = reforgebutton:CreateFontString();
-    reforgebutton.Text:SetFont("Fonts\\FRIZQT__.TTF", 12)
-    reforgebutton.Text:SetFontObject(GameFontNormal)
-    reforgebutton.Text:SetText("|cffffffffStart\nReforge");
-    reforgebutton.Text:SetPoint("CENTER", 0, 0);
-    reforgebutton.Text:SetShadowOffset(1,-1);
     
     reforgebutton.AnimatedTex.AG = reforgebutton.AnimatedTex:CreateAnimationGroup();
     reforgebutton.AnimatedTex.AG.Alpha0 = reforgebutton.AnimatedTex.AG:CreateAnimation("Alpha");
@@ -780,14 +809,14 @@ local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticEx
     reforgebutton.AnimatedTex.AG.Alpha1:SetEndDelay(0);
     reforgebutton.AnimatedTex.AG.Alpha1:SetSmoothing("IN_OUT");
     reforgebutton.AnimatedTex.AG.Alpha1:SetChange(-1);
-    
+
     reforgebutton.AnimatedTex.AG:SetScript("OnFinished", function()
         reforgebutton.AnimatedTex.AG:Play();
     end)
-    
+
     reforgebutton.AnimatedTex.AG:Play();
 
-    local secureBttn = CreateFrame("Button", "MysticExtended_Secure", MysticExtendedFrame_Menu, "SecureActionButtonTemplate");
+local secureBttn = CreateFrame("Button", "MysticExtended_Secure", MysticExtendedFrame_Menu, "SecureActionButtonTemplate");
     secureBttn:SetSize(50,50);
     secureBttn:SetPoint("CENTER", "MysticExtendedFrame_Menu", "CENTER");
     secureBttn:SetAttribute("shift-type1", "item");
@@ -797,15 +826,33 @@ local reforgebutton = CreateFrame("Button", "MysticExtendedFrame_Menu", MysticEx
     secureBttn:SetFrameStrata("DIALOG");
     secureBttn:SetScript("OnKeyUp", function() MysticExtended_Secure:Hide() end);
     secureBttn:SetScript("OnLeave", function()
-        MysticExtended_Secure:Hide();
+        reforgebutton.Highlight:Hide();
+        secureBttn:Hide();
+        secureVisable = false
+        GameTooltip:Hide();
     end);
 
+local countDownFrame = CreateFrame("Frame", "MysticExtendedCountDownFrame", UIParrnt, nil);
+    countDownFrame:SetPoint("CENTER",0,200);
+    countDownFrame:SetSize(400,50);
+    countDownFrame:Hide();
+    countDownFrame.cText = countDownFrame:CreateFontString("MysticExtendedCountDownText","OVERLAY","GameFontNormal");
+    countDownFrame.cText:Show();
+    countDownFrame.cText:SetPoint("CENTER",0,0);
+    countDownFrame.nextlvlText = countDownFrame:CreateFontString("MysticExtendedNextLevelText","OVERLAY","GameFontNormal");
+    countDownFrame.nextlvlText:Show();
+    countDownFrame.nextlvlText:SetPoint("CENTER",0,-20);
+    countDownFrame.rollingText = countDownFrame:CreateFontString("MysticExtendedRollingText","OVERLAY","GameFontNormal");
+    countDownFrame.rollingText:Show();
+    countDownFrame.rollingText:SetPoint("CENTER",0,20);
+    countDownFrame.rollingText:SetText("Auto Reforging In Progress");
+
 --[[
-MysticExtended_SlashCommand(msg):
+SlashCommand(msg):
 msg - takes the argument for the /mysticextended command so that the appropriate action can be performed
 If someone types /mysticextended, bring up the options box
 ]]
-local function MysticExtended_SlashCommand(msg)
+local function SlashCommand(msg)
     if msg == "options" then
         ME:OptionsToggle();
     elseif msg == "extract" then
@@ -857,11 +904,11 @@ function ME:OnInitialize()
 
     ME.AutoRolling = false
 
-    --Enable the use of /al or /atlasloot to open the loot browser
+    --Enable the use of /me or /mysticextended to open the loot browser
     SLASH_MYSTICEXTENDED1 = "/mysticextended";
     SLASH_MYSTICEXTENDED2 = "/me";
     SlashCmdList["MYSTICEXTENDED"] = function(msg)
-        MysticExtended_SlashCommand(msg);
+        SlashCommand(msg);
     end
 
     ME:RegisterComm("MysticExtendedEnchantList")
