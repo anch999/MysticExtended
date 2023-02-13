@@ -8,4 +8,3 @@ If list, ignore list and quality are all selected it will check them in that ord
 To add an enchant to a list just alt click the enchants from the alter window or you can also alt click items in your inventory with enchants to say put them on a don't roll/ignore list.
 Left clicking on the Start Reforge buttons will start rolling Right clicking on the Reforge buttons gives you a drop down menu to set what options are being rolled for.
 Right clicking on an enchant in a list will remove it from the list shift click will link the enchant.
-
