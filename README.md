@@ -1,4 +1,4 @@
-# Mystic Extended
+# MysticExtended
 This is an auto mystic enchant rolling addon.
 What it does is adds a new window attached to the side of the ascension enchanting window it lets you create lists of mystic enchants that you would like or these lists can also be set to ignore enchants when rolling.
 Once it is running it is all automatic as long as you have runes and items on the roll list in the settings.
