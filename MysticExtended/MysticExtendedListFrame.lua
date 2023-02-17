@@ -240,9 +240,9 @@ end
 ---------------------ScrollFrame----------------------------------
 --Check to see if the enchant is allreay on the list
 local function GetSavedEnchant(id)
-    for n in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
-        if ME.EnchantSaveLists[ME.db.currentSelectedList][n][1] == id then
-            return n
+    for i, enchant in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
+        if enchant[1] == id then
+            return i
         end
     end
 end
@@ -344,16 +344,28 @@ function ME:CreateItemLink(id)
     return link
 end
 
+local function enchantButtonClick(self)
+    local id = MYSTIC_ENCHANT_SPELLS[self.Enchant]
+    if not GetSavedEnchant(id) then
+        tinsert(ME.EnchantSaveLists[ME.db.currentSelectedList],{id})
+        MysticExtended_ScrollFrameUpdate();
+    end
+end
+
 for i = 1, 15 do
-    _G["CollectionItemFrame"..i].Button:HookScript("OnClick", function(self)
+    local button = _G["CollectionItemFrame"..i].Button
+    local buttonFake = _G["CollectionItemFrame"..i].Button_fake
+    button:HookScript("OnClick", function(self)
         if IsAltKeyDown() then
-            if MysticExtendedListFrame:IsVisible() then
-                local id = MYSTIC_ENCHANT_SPELLS[self.Enchant]
-                if not GetSavedEnchant(id) then
-                    tinsert(ME.EnchantSaveLists[ME.db.currentSelectedList],{id})
-                    MysticExtended_ScrollFrameUpdate();
-                end
-            end
+            enchantButtonClick(self)
+        end
+    end)
+    buttonFake:HookScript("OnClick", function(self)
+        if IsAltKeyDown() then
+            enchantButtonClick(self)
+        elseif IsShiftKeyDown() then
+            local id = MYSTIC_ENCHANT_SPELLS[self.Enchant]
+            ChatEdit_InsertLink(ME:CreateItemLink(id))
         end
     end)
 end
