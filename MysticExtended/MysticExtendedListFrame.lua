@@ -345,7 +345,7 @@ function ME:CreateItemLink(id)
 end
 
 local function enchantButtonClick(self)
-    local id = MYSTIC_ENCHANT_SPELLS[self.Enchant]
+    local id = self.Enchant
     if not GetSavedEnchant(id) then
         tinsert(ME.EnchantSaveLists[ME.db.currentSelectedList],{id})
         MysticExtended_ScrollFrameUpdate();
@@ -364,7 +364,7 @@ for i = 1, 15 do
         if IsAltKeyDown() then
             enchantButtonClick(self)
         elseif IsShiftKeyDown() then
-            local id = MYSTIC_ENCHANT_SPELLS[self.Enchant]
+            local id = self.Enchant
             ChatEdit_InsertLink(ME:CreateItemLink(id))
         end
     end)

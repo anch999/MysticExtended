@@ -311,7 +311,7 @@ local function getItemID(bagID, slotID, item)
     end
 end
 
-function ME:ExtractEnchant(bagID,slotID,enchantID)
+function ME:ExtractEnchant(bagID, slotID, enchantID)
     --checks to see if you have any mystic extracts
     if GetItemCount(98463) and (GetItemCount(98463) > 0) then
         --checks to see if you know the enchant if not extract and remove from list
