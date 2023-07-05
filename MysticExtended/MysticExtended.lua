@@ -1122,7 +1122,7 @@ local function toggleFloatingbutton()
 end
 
 -- returns true, if player has item with given ID in inventory or bags and it's not on cooldown
-local function hasItem(itemID)
+function ME:HasItem(itemID)
     local item, found, id
     -- scan bags
     for bag = 0, 4 do
@@ -1157,7 +1157,7 @@ function ME:MiniMapMenuRegister(self)
                     'closeWhenClicked', true
                 )
                 local itemID = 1903513
-                if hasItem(itemID) then
+                if ME:HasItem(itemID) then
                     local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(itemID)
                     local startTime, duration = GetItemCooldown(itemID)
                     local cooldown = math.ceil(((duration - (GetTime() - startTime))/60))

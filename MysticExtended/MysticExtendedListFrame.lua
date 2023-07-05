@@ -117,7 +117,7 @@ StaticPopupDialogs["MYSTICEXTENDED_DELETELIST"] = {
     text = "Delete List?",
     button1 = "Confirm",
     button2 = "Cancel",
-    OnAccept = function (self, data, data2)
+    OnAccept = function ()
         tremove(ME.EnchantSaveLists, ME.db.currentSelectedList);
         UIDropDownMenu_Initialize(MysticExtended_ListDropDown, ME.MenuInitialize);
         UIDropDownMenu_SetSelectedID(MysticExtended_ListDropDown,1);
@@ -194,8 +194,8 @@ local editlistnamebtn = CreateFrame("Button", "MysticExtended_EditListBtn", Myst
     editlistnamebtn:SetText("E")
     editlistnamebtn:SetSize(27, 27);
     editlistnamebtn:SetScript("OnClick", function() StaticPopup_Show("MYSTICEXTENDED_EDITLISTNAME") end);
-    editlistnamebtn:SetScript("OnEnter", function()
-		GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+    editlistnamebtn:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:SetText("Edit List Name")
 		GameTooltip:Show()
 	end)
@@ -207,8 +207,8 @@ local addlistbtn = CreateFrame("Button", "MysticExtended_AddListBtn", MysticExte
     addlistbtn:SetText("+")
     addlistbtn:SetSize(27, 27);
     addlistbtn:SetScript("OnClick", function() StaticPopup_Show("MYSTICEXTENDED_ADDLIST") end);
-    addlistbtn:SetScript("OnEnter", function()
-		GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+    addlistbtn:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:SetText("Create New List")
 		GameTooltip:Show()
 	end)
@@ -219,8 +219,8 @@ local removelistbtn = CreateFrame("Button", "MysticExtended_RemoveListBtn", Myst
     removelistbtn:SetText("-")
     removelistbtn:SetSize(27, 27);
     removelistbtn:SetScript("OnClick", function() StaticPopup_Show("MYSTICEXTENDED_DELETELIST") end);
-    removelistbtn:SetScript("OnEnter", function()
-		GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+    removelistbtn:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:SetText("Remove List")
 		GameTooltip:Show()
 	end)
@@ -261,30 +261,32 @@ local scrollFrame = CreateFrame("Frame", "MysticExtended_ScrollFrame", MysticExt
     });
 
 function MysticExtended_ScrollFrameUpdate()
-    showtable = {Name = ME.EnchantSaveLists[ME.db.currentSelectedList].Name, MenuID = ME.EnchantSaveLists[ME.db.currentSelectedList].MenuID};
-    for _,v in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
-        if MYSTIC_ENCHANTS[v[1]] then
-            tinsert(showtable,v)
+    if ME.EnchantSaveLists[ME.db.currentSelectedList] then
+        showtable = {Name = ME.EnchantSaveLists[ME.db.currentSelectedList].Name, MenuID = ME.EnchantSaveLists[ME.db.currentSelectedList].MenuID};
+        for _,v in ipairs(ME.EnchantSaveLists[ME.db.currentSelectedList]) do
+            if MYSTIC_ENCHANTS[v[1]] then
+                tinsert(showtable,v)
+            end
+        end
+
+        local maxValue = #showtable
+        FauxScrollFrame_Update(scrollFrame.scrollBar, maxValue, MAX_ROWS, ROW_HEIGHT);
+        local offset = FauxScrollFrame_GetOffset(scrollFrame.scrollBar);
+        for i = 1, MAX_ROWS do
+            local value = i + offset
+            scrollFrame.rows[i]:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD");
+            if value <= maxValue and showtable[value] and MYSTIC_ENCHANTS[showtable[value][1]] then
+                local row = scrollFrame.rows[i]
+                local qualityColor = select(4,GetItemQualityColor(MYSTIC_ENCHANTS[showtable[value][1]].quality))
+                row:SetText(qualityColor..GetSpellInfo(MYSTIC_ENCHANTS[showtable[value][1]].spellID))
+                row.enchantID = showtable[value][1]
+                row.link = ME:CreateItemLink(showtable[value][1])
+                row:Show()
+            else
+                scrollFrame.rows[i]:Hide()
+            end
         end
     end
-
-    local maxValue = #showtable
-	FauxScrollFrame_Update(scrollFrame.scrollBar, maxValue, MAX_ROWS, ROW_HEIGHT);
-	local offset = FauxScrollFrame_GetOffset(scrollFrame.scrollBar);
-	for i = 1, MAX_ROWS do
-		local value = i + offset
-        scrollFrame.rows[i]:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD");
-		if value <= maxValue and showtable[value] and MYSTIC_ENCHANTS[showtable[value][1]] then
-			local row = scrollFrame.rows[i]
-            local qualityColor = select(4,GetItemQualityColor(MYSTIC_ENCHANTS[showtable[value][1]].quality))
-            row:SetText(qualityColor..GetSpellInfo(MYSTIC_ENCHANTS[showtable[value][1]].spellID))
-            row.enchantID = showtable[value][1]
-            row.link = ME:CreateItemLink(showtable[value][1])
-			row:Show()
-		else
-			scrollFrame.rows[i]:Hide()
-		end
-	end
 end
 
 local scrollSlider = CreateFrame("ScrollFrame","MysticExtendedListFrameScroll",MysticExtended_ScrollFrame,"FauxScrollFrameTemplate");
@@ -349,20 +351,29 @@ local function enchantButtonClick(self)
     if not GetSavedEnchant(id) then
         tinsert(ME.EnchantSaveLists[ME.db.currentSelectedList],{id})
         MysticExtended_ScrollFrameUpdate();
+    else
+        local itemLink = ME:CreateItemLink(id)
+        DEFAULT_CHAT_FRAME:AddMessage(itemLink .. " Is already on this list.")
     end
 end
 
 for i = 1, 15 do
     local button = _G["CollectionItemFrame"..i].Button
     local buttonFake = _G["CollectionItemFrame"..i].Button_fake
-    button:HookScript("OnClick", function(self)
+    button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    buttonFake:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    button:HookScript("OnClick", function(self, button)
         if IsAltKeyDown() then
             enchantButtonClick(self)
+        elseif IsControlKeyDown() and (button == "RightButton") then
+            OpenAscensionDBURL("?spell="..self.Enchant)
         end
     end)
-    buttonFake:HookScript("OnClick", function(self)
+    buttonFake:HookScript("OnClick", function(self, button)
         if IsAltKeyDown() then
             enchantButtonClick(self)
+        elseif IsControlKeyDown() and (button == "RightButton") then
+            OpenAscensionDBURL("?spell="..self.Enchant)
         elseif IsShiftKeyDown() then
             local id = self.Enchant
             ChatEdit_InsertLink(ME:CreateItemLink(id))
@@ -378,6 +389,13 @@ local reforgebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameReforge
     reforgebuttonlist:SetText("Start Reforge");
     reforgebuttonlist:RegisterForClicks("LeftButtonDown", "RightButtonDown");
     reforgebuttonlist:SetScript("OnClick", function(self, btnclick) MysticExtended_OnClick(self,btnclick) end);
+    reforgebuttonlist:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("Left Click To Start Reforging");
+        GameTooltip:AddLine("Right Click To Show Roll Settings");
+        GameTooltip:Show();
+    end);
+    reforgebuttonlist:SetScript("OnLeave", function() GameTooltip:Hide() end);
 
 --Shows a menu with options and sharing options
 local sharebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameMenuButton", MysticExtendedListFrame, "OptionsButtonTemplate");
@@ -390,7 +408,7 @@ local sharebuttonlist = CreateFrame("Button", "MysticExtended_ListFrameMenuButto
             dewdrop:Close();
         else
             ME:ListFrameMenuRegister(self);
-            dewdrop:Open(this);
+            dewdrop:Open(self);
         end
     end);
 
@@ -423,6 +441,8 @@ local meFrame = MysticEnchantingFrame
     meFrame.SearchBox:SetPoint("TOPRIGHT", meFrame, -330, -33)
     meFrame.EnchantTypeList:SetPoint("TOPRIGHT", meFrame, -200, -32)
 
+
+local altarBtnBuilt = false
 --Show list view when Mystic Enchanting frame opens
 meFrame:HookScript("OnShow",
         function()
@@ -434,7 +454,43 @@ meFrame:HookScript("OnShow",
                 MysticExtendedListFrame:Hide();
                 showFrameBttn:SetText("Show");
             end
+            local itemID = 1903513
+            if not altarBtnBuilt and ME:HasItem(itemID) then
+                meFrame.ControlFrame.ExtractButton:SetWidth(77)
+                meFrame.ControlFrame.RollButton:SetWidth(77)
+                meFrame.ControlFrame.ExtractButton:ClearAllPoints()
+                meFrame.ControlFrame.ExtractButton:SetPoint("RIGHT",-27,3)
+                local altarBtn = CreateFrame("Button", "MysticExtended_AltarButton", meFrame, "SecureActionButtonTemplate")
+                altarBtn:SetSize(18, 18)
+                altarBtn:SetPoint("RIGHT", meFrame.ControlFrame.ExtractButton, 20, 0)
+                altarBtn.icon = altarBtn:CreateTexture(nil, "ARTWORK")
+                altarBtn.icon:SetSize(18, 18)
+                altarBtn.icon:SetPoint("CENTER", altarBtn, "CENTER", 0, 0)
+                local _, itemLink, _, _, _, _, _, _, _, icon = GetItemInfo(itemID)
+                altarBtn.icon:SetTexture(icon);
+                altarBtn.Highlight = altarBtn:CreateTexture(nil, "OVERLAY");
+                altarBtn.Highlight:SetSize(19,19);
+                altarBtn.Highlight:SetPoint("CENTER", altarBtn,"CENTER", 0, 0);
+                altarBtn.Highlight:SetTexture("Interface\\AddOns\\AwAddons\\Textures\\EnchOverhaul\\Slot2Selected");
+                altarBtn.Highlight:Hide();
+                altarBtn:SetAttribute("type", "item");
+                altarBtn:SetAttribute("item","Mystic Enchanting Altar");
+                altarBtn:SetScript("OnEnter", function(self)
+                    altarBtn.Highlight:Show();
+                    local startTime, duration = GetItemCooldown(itemID)
+                    local cooldown = math.ceil(((duration - (GetTime() - startTime))/60))
+                    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                    GameTooltip:SetHyperlink(itemLink)
+                    if cooldown > 0 then
+                        GameTooltip:AddLine("Cooldown: |cFF00FFFF("..cooldown.." ".. "mins" .. ")")
+                      end
+                    GameTooltip:Show()
+                end)
+                altarBtn:SetScript("OnLeave", function() GameTooltip:Hide() altarBtn.Highlight:Hide() end)
+                altarBtnBuilt = true
+            end
         end)
+
 --Hide it when it closes
 meFrame:HookScript("OnHide",
         function()
@@ -450,6 +506,9 @@ hooksecurefunc("ContainerFrameItemButton_OnModifiedClick", function(self)
             if enchant and not GetSavedEnchant(enchant) then
                 tinsert(ME.EnchantSaveLists[ME.db.currentSelectedList],{enchant})
                 MysticExtended_ScrollFrameUpdate();
+            else
+                local itemLink = ME:CreateItemLink(enchant)
+                DEFAULT_CHAT_FRAME:AddMessage(itemLink .. " Is already on this list.")
             end
     end
 end)
