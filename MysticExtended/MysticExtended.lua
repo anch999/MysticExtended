@@ -924,7 +924,7 @@ local function guildBankFrameOpened()
         toPointX, toPointY = -80, 25
         fromPointX, fromPointY = 80, 25
     end
-    local moveReItemsTobank = CreateFrame("Button", "MysticExtended_BankTo", gFrame, "OptionsButtonTemplate");
+    local moveReItemsTobank = CreateFrame("Button", nil, gFrame, "OptionsButtonTemplate");
     moveReItemsTobank:SetSize(135, 26);
     moveReItemsTobank:SetPoint("TOP", gFrame, "TOP", toPointX, toPointY);
     moveReItemsTobank:SetText("Move To Bank");
@@ -939,7 +939,7 @@ local function guildBankFrameOpened()
             end
         end
     end)
-    local moveReItemsFrombank = CreateFrame("Button", "MysticExtended_BankFrom", gFrame, "OptionsButtonTemplate");
+    local moveReItemsFrombank = CreateFrame("Button", nil, gFrame, "OptionsButtonTemplate");
     moveReItemsFrombank:SetSize(135, 26);
     moveReItemsFrombank:SetPoint("TOP", gFrame, "TOP", fromPointX, fromPointY);
     moveReItemsFrombank:SetText("Move To Inventory");
@@ -957,31 +957,9 @@ local function guildBankFrameOpened()
      ME:UnregisterEvent("GUILDBANKFRAME_OPENED");
 end
 
---auto converts trinkets to there bloody version
-function ME:BloodyJarOpen()
-    if GossipFrameNpcNameText:GetText() == "Bloody Jar" and ME.db.AutoMysticScrollBloodforge then
-        for i = 1, GetNumGossipOptions() - 1 do
-            local b = _G["GossipTitleButton" .. i]
-            if b and b:GetText() and b:GetText():match("Untarnished Mystic Scroll") then
-                b:Click()
-                _G["StaticPopup1Button1"]:Click()
-                return
-            end
-        end
-    end
-end
 
-function ME:AutoUntarnished()
-    if ME.db.AutoMysticScrollBloodforge then
-        ME.db.AutoMysticScrollBloodforge = false
-        ME:UnregisterEvent("GOSSIP_SHOW");
-        DEFAULT_CHAT_FRAME:AddMessage("Auto BloodyJar Is Now OFF");
-    else
-        ME.db.AutoMysticScrollBloodforge = true
-        ME:RegisterEvent("GOSSIP_SHOW", MysticExtended.BloodyJarOpen);
-        DEFAULT_CHAT_FRAME:AddMessage("Auto BloodyJar Is Now ON");
-    end
-end
+
+
 
 function ME:Debug()
     if ME.db.Debug then
@@ -997,13 +975,6 @@ end
 function ME:OnEnable()
     MysticExtended_ListEnable()
     MysticExtended_DropDownInitialize()
-
-    if ME.db.AutoMysticScrollBloodforge then
-        --MysticExtendedOptions_AutoMysticScrollBloodforge:SetChecked(true);
-        ME:RegisterEvent("GOSSIP_SHOW", MysticExtended.BloodyJarOpen);
-    else
-        --MysticExtendedOptions_AutoMysticScrollBloodforge:SetChecked(false);
-    end
 
     if ME.db.ShowInCity and (citysList[GetMinimapZoneText()] or citysList[GetRealZoneText()]) then
         MysticExtendedOptions_FloatCitySetting:SetChecked(true);
@@ -1060,6 +1031,9 @@ function ME:OnEnable()
         auctionator = true
         MysticExtended_MoneyFrame:Show()
     end
+
+    --Add the loot browser to the special frames tables to enable closing wih the ESC key
+	tinsert(UISpecialFrames, "MysticExtendedExtractFrame");
 
     MoneyInputFrame_SetCopper(MysticExtended_MoneyFrame,ME.db.MinGold)
 end
